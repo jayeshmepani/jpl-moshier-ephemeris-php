@@ -88,15 +88,19 @@ $html = <<<'HTML'
                 <h3>Compute Power</h3>
                 <ul class="specs-list">
                     <li><span class="specs-label">Processor</span><span class="specs-value" id="spec-cpu">--</span></li>
-                    <li><span class="specs-label">RAM</span><span class="specs-value" id="spec-ram">--</span></li>
-                    <li><span class="specs-label">JIT Engine</span><span class="specs-value" id="spec-jit">--</span></li>
+                    <li><span class="specs-label">Cores/Threads</span><span class="specs-value" id="spec-cores">--</span></li>
+                    <li><span class="specs-label">Frequency</span><span class="specs-value" id="spec-freq">--</span></li>
+                    <li><span class="specs-label">Architecture</span><span class="specs-value" id="spec-arch">--</span></li>
+                    <li><span class="specs-label">Instruction Sets</span><span class="specs-value" id="spec-instr">--</span></li>
                 </ul>
             </div>
             <div class="card" style="grid-column: span 2;">
                 <h3>Software Stack</h3>
                 <ul class="specs-list">
                     <li><span class="specs-label">Operating System</span><span class="specs-value" id="spec-os">--</span></li>
+                    <li><span class="specs-label">Total RAM</span><span class="specs-value" id="spec-ram">--</span></li>
                     <li><span class="specs-label">PHP Runtime</span><span class="specs-value" id="spec-php">--</span></li>
+                    <li><span class="specs-label">JIT Engine</span><span class="specs-value" id="spec-jit">--</span></li>
                     <li><span class="specs-label">Library</span><span class="specs-value" id="spec-lib">--</span></li>
                     <li><span class="specs-label">Test Date</span><span class="specs-value" id="spec-date">--</span></li>
                 </ul>
@@ -174,6 +178,11 @@ $html = <<<'HTML'
             const results = data.results;
 
             document.getElementById('spec-cpu').innerText = system.cpu || '--';
+            document.getElementById('spec-cores').innerText = system.cores || '--';
+            document.getElementById('spec-freq').innerText = system.freq || '--';
+            document.getElementById('spec-arch').innerText = system.arch || '--';
+            document.getElementById('spec-instr').innerText = system.instr || '--';
+            
             document.getElementById('spec-ram').innerText = system.ram || '--';
             document.getElementById('spec-jit').innerText = system.jit || '--';
             document.getElementById('spec-os').innerText = system.os || '--';
@@ -278,4 +287,4 @@ HTML;
 
 $html = str_replace('{{DATA}}', json_encode($allData), $html);
 file_put_contents(__DIR__ . '/benchmark.html', $html);
-echo "✅ True Transparency Multi-System Dashboard Updated: docs/benchmark/benchmark.html\n";
+echo "✅ Dynamic High-Density Dashboard Updated: docs/benchmark/benchmark.html\n";

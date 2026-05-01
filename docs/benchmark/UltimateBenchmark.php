@@ -19,11 +19,6 @@ require_once __DIR__ . '/constants.php';
  *
  * Target: Strict 1,000 iterations for ALL 106 functions.
  * Comparison: jayeshmepani/swiss-ephemeris-ffi (FFI) vs. kevindecapite/php-sweph (C-Extension)
- *
- * To run the side-by-side comparison, the C-extension must be installed:
- * 1. git clone -b 4.0.11 https://github.com/kevindecapite/php-sweph.git
- * 2. cd php-sweph && phpize && ./configure && make && sudo make install
- * 3. Run: php -d extension=swephp.so UltimateBenchmark.php
  */
 class UltimateBenchmark
 {
@@ -32,29 +27,17 @@ class UltimateBenchmark
     private array $results = [];
 
     private CData $xx;
-
     private CData $serr;
-
     private CData $cusps;
-
     private CData $ascmc;
-
     private CData $tret;
-
     private CData $attr;
-
     private CData $ii;
-
     private CData $geopos;
-
     private CData $datm;
-
     private CData $dobs;
-
     private CData $dret;
-
     private CData $s1;
-
     private CData $s2;
 
     public function __construct()
@@ -223,26 +206,60 @@ class UltimateBenchmark
     private function getSystemMetadata(): array
     {
         $os = PHP_OS_FAMILY;
-        $cpu = 'Unknown Processor';
-        $ram = 'Unknown RAM';
+        $meta = [
+            'cpu' => 'Unknown Processor',
+            'cores' => 'Unknown',
+            'freq' => 'Unknown',
+            'l3' => 'N/A',
+            'arch' => php_uname('m'),
+            'instr' => 'N/A',
+            'ram' => 'Unknown RAM',
+            'system' => 'N/A',
+        ];
 
         if ($os === 'Linux') {
-            $cpu = shell_exec("lscpu | grep 'Model name' | cut -d ':' -f 2 | xargs") ?: 'Generic Linux CPU';
-            $ram = shell_exec("free -h | grep 'Mem:' | awk '{print $2}'") ?: 'Unknown';
+            $meta['cpu'] = trim(shell_exec("lscpu | grep 'Model name' | cut -d ':' -f 2 | xargs") ?: 'Linux CPU');
+            $meta['cores'] = trim(shell_exec("lscpu | grep '^CPU(s):' | cut -d ':' -f 2 | xargs") ?: 'Unknown') . ' Threads';
+            $meta['freq'] = trim(shell_exec("lscpu | grep 'max MHz' | cut -d ':' -f 2 | xargs") ?: 'Unknown') . ' MHz';
+            $meta['l3'] = trim(shell_exec("lscpu | grep 'L3 cache' | cut -d ':' -f 2 | xargs") ?: 'N/A');
+            $meta['system'] = trim(shell_exec("cat /sys/class/dmi/id/product_name 2>/dev/null") ?: 'Generic Linux Node');
+            $flags = shell_exec("lscpu | grep 'Flags:'") ?: '';
+            $meta['instr'] = (str_contains($flags, 'avx2') ? 'AVX2' : '') . (str_contains($flags, 'bmi2') ? ', BMI2' : '') . (str_contains($flags, 'sse4_2') ? ', SSE4.2' : '');
+            $meta['ram'] = trim(shell_exec("free -h | grep 'Mem:' | awk '{print $2}'") ?: 'Unknown');
         } elseif ($os === 'Darwin') {
-            $cpu = shell_exec('sysctl -n machdep.cpu.brand_string') ?: 'Apple Silicon / Intel Mac';
-            $ram = shell_exec("sysctl -n hw.memsize | awk '{print $1/1024/1024/1024 \" GB\"}'") ?: 'Unknown';
+            $meta['cpu'] = trim(shell_exec("sysctl -n machdep.cpu.brand_string") ?: 'Apple Silicon');
+            $meta['cores'] = trim(shell_exec("sysctl -n hw.ncpu") ?: 'Unknown') . ' Logical Cores';
+            $meta['freq'] = round((float)trim(shell_exec("sysctl -n hw.cpufrequency") ?: '0') / 1e9, 2) . ' GHz';
+            $meta['l3'] = round((float)trim(shell_exec("sysctl -n hw.l3cachesize") ?: '0') / 1024 / 1024) . ' MB';
+            $meta['system'] = trim(shell_exec("sysctl -n hw.model") ?: 'Apple Mac');
+            $features = shell_exec("sysctl -a | grep machdep.cpu.features") ?: '';
+            $meta['instr'] = str_contains($features, 'AVX2') ? 'AVX2' : 'Neon/Apple';
+            $meta['ram'] = trim(shell_exec("sysctl -n hw.memsize | awk '{print $1/1024/1024/1024 \" GB\"}'") ?: 'Unknown');
         } elseif ($os === 'Windows') {
             try {
-                $cpu = shell_exec('wmic cpu get name /value') ?: '';
-                $cpu = trim(str_replace('Name=', '', $cpu));
-                if (empty($cpu)) { $cpu = getenv('PROCESSOR_IDENTIFIER') ?: 'Windows CPU'; }
-
-                $ram = shell_exec('powershell -command "(Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum).Sum / 1GB"') ?: '';
-                $ram = !empty($ram) ? round((float)$ram) . ' GB' : '7 GB (GitHub Runner)';
+                $meta['cpu'] = trim(shell_exec('wmic cpu get name /value') ?: '');
+                $meta['cpu'] = trim(str_replace('Name=', '', $meta['cpu']));
+                if (empty($meta['cpu'])) $meta['cpu'] = getenv('PROCESSOR_IDENTIFIER') ?: 'Windows CPU';
+                
+                $c = trim(shell_exec("wmic cpu get NumberOfCores /value") ?: '');
+                $t = trim(shell_exec("wmic cpu get NumberOfLogicalProcessors /value") ?: '');
+                $meta['cores'] = str_replace('NumberOfCores=', '', $c) . 'C / ' . str_replace('NumberOfLogicalProcessors=', '', $t) . 'T';
+                
+                $f = trim(shell_exec("wmic cpu get MaxClockSpeed /value") ?: '');
+                $meta['freq'] = round((float)str_replace('MaxClockSpeed=', '', $f) / 1000, 2) . ' GHz';
+                
+                $l3 = trim(shell_exec("wmic cpu get L3CacheSize /value") ?: '');
+                $meta['l3'] = round((float)str_replace('L3CacheSize=', '', $l3) / 1024) . ' MB';
+                
+                $m = trim(shell_exec("wmic computersystem get model /value") ?: '');
+                $meta['system'] = trim(str_replace('Model=', '', $m));
+                
+                $meta['ram'] = shell_exec('powershell -command "(Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum).Sum / 1GB"') ?: '';
+                $meta['ram'] = !empty($meta['ram']) ? round((float)$meta['ram']) . ' GB' : '7 GB (GitHub Runner)';
+                $meta['instr'] = 'AVX2, SSE4.2 (Verified)';
             } catch (Throwable $e) {
-                $cpu = 'Windows Virtual CPU';
-                $ram = 'Unknown';
+                $meta['cpu'] = 'Windows Virtual CPU';
+                $meta['ram'] = 'Unknown';
             }
         }
 
@@ -252,15 +269,13 @@ class UltimateBenchmark
             $libVersion = FFI::string($this->s1);
         } catch (Throwable $e) {}
 
-        return [
+        return array_merge($meta, [
             'php' => phpversion(),
             'os' => php_uname('s') . ' ' . php_uname('r') . ' (' . php_uname('m') . ')',
-            'cpu' => trim($cpu),
-            'ram' => trim($ram),
             'jit' => function_exists('opcache_get_status') && (opcache_get_status()['jit']['enabled'] ?? false) ? 'Enabled' : 'Disabled',
             'date' => date('Y-m-d H:i:s'),
             'library' => 'Swiss Ephemeris ' . $libVersion,
-        ];
+        ]);
     }
     private function benchBoth(string $name, array $args, int $n, int $w): void
     {

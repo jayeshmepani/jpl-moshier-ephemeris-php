@@ -14,7 +14,14 @@ require_once __DIR__ . '/constants.php';
 
 /**
  * THE ULTIMATE TRANSPARENCY BENCHMARK (106 FUNCTIONS)
- * - Strict 1,000 iterations for ALL functions.
+ * 
+ * Target: Strict 1,000 iterations for ALL 106 functions.
+ * Comparison: jayeshmepani/swiss-ephemeris-ffi (FFI) vs. kevindecapite/php-sweph (C-Extension)
+ * 
+ * To run the side-by-side comparison, the C-extension must be installed:
+ * 1. git clone -b 4.0.11 https://github.com/kevindecapite/php-sweph.git
+ * 2. cd php-sweph && phpize && ./configure && make && sudo make install
+ * 3. Run: php -d extension=swephp.so UltimateBenchmark.php
  */
 class UltimateBenchmark
 {
@@ -177,13 +184,42 @@ class UltimateBenchmark
         }
 
         $export = [
-            'system' => ['php' => phpversion(), 'os' => PHP_OS, 'date' => date('Y-m-d H:i:s')],
+            'system' => $this->getSystemMetadata(),
             'results' => $this->results
         ];
         file_put_contents('comprehensive_benchmark_stats.json', json_encode($export, JSON_PRETTY_PRINT));
         echo "\n✅ ALL STATS EXPORTED TO comprehensive_benchmark_stats.json\n";
     }
 
+    private function getSystemMetadata(): array
+    {
+        $os = PHP_OS_FAMILY;
+        $cpu = 'Unknown Processor';
+        $ram = 'Unknown RAM';
+
+        if ($os === 'Linux') {
+            $cpu = shell_exec("lscpu | grep 'Model name' | cut -d ':' -f 2 | xargs") ?: 'Generic Linux CPU';
+            $ram = shell_exec("free -h | grep 'Mem:' | awk '{print $2}'") ?: 'Unknown';
+        } elseif ($os === 'Darwin') {
+            $cpu = shell_exec("sysctl -n machdep.cpu.brand_string") ?: 'Apple Silicon / Intel Mac';
+            $ram = shell_exec("sysctl -n hw.memsize | awk '{print $1/1024/1024/1024 \" GB\"}'") ?: 'Unknown';
+        } elseif ($os === 'Windows') {
+            $cpu = shell_exec("wmic cpu get name /value | findstr Name") ?: 'Windows CPU';
+            $cpu = str_replace('Name=', '', $cpu);
+            $ram = shell_exec("wmic computersystem get totalphysicalmemory /value | findstr Total") ?: 'Unknown';
+            $ram = round((float)str_replace('TotalPhysicalMemory=', '', $ram) / 1024 / 1024 / 1024) . ' GB';
+        }
+
+        return [
+            'php' => phpversion(),
+            'os' => php_uname('s') . ' ' . php_uname('r') . ' (' . php_uname('m') . ')',
+            'cpu' => trim($cpu),
+            'ram' => trim($ram),
+            'jit' => function_exists('opcache_get_status') && (opcache_get_status()['jit']['enabled'] ?? false) ? 'Enabled' : 'Disabled',
+            'date' => date('Y-m-d H:i:s'),
+            'library' => 'Swiss Ephemeris 2.10.03 (v2.10.3final)'
+        ];
+    }
     private function benchBoth(string $name, array $args, int $n, int $w): void
     {
         $ffi_err = null;

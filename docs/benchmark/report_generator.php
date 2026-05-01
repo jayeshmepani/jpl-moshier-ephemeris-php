@@ -4,7 +4,6 @@ declare(strict_types=1);
 /**
  * TRUE TRANSPARENCY MULTI-SYSTEM REPORT GENERATOR
  * This script is 100% data-driven. It has ZERO hardcoded specs or placeholders.
- * It builds the entire dashboard UI from the available JSON benchmark datasets.
  */
 
 $dir = __DIR__;
@@ -16,7 +15,6 @@ foreach ($jsonFiles as $file) {
     if (!$data || !isset($data['system']['os'])) continue;
     
     $osName = $data['system']['os'];
-    // Map to simple tab keys
     $key = str_contains($osName, 'Linux') ? 'Linux' : (str_contains($osName, 'Darwin') ? 'macOS' : 'Windows');
     $allData[$key] = $data;
 }
@@ -187,23 +185,34 @@ $html = <<<'HTML'
             const comparedResults = resultEntries.filter(e => e[1].ext);
             
             if (comparedResults.length > 0) {
-                const sortedRatios = comparedResults.map(e => e[1].ratios.mean).sort((a,b) => a-b);
-                const medianRatio = sortedRatios[Math.floor(sortedRatios.length / 2)];
-                const overheadPct = ((medianRatio - 1) * 100).toFixed(0);
-                document.getElementById('overall-median').innerText = (overheadPct > 0 ? '+' : '') + overheadPct + '%';
-                document.getElementById('status-text').innerText = medianRatio < 1.3 ? 'PRO-TIER PERFORMANCE' : 'STANDARD OVERHEAD';
-                document.getElementById('status-text').style.color = medianRatio < 1.3 ? 'var(--success)' : 'var(--primary)';
-                
-                const ffiWins = comparedResults.filter(e => e[1].ratios.mean < 1.0).length;
-                document.getElementById('birds-eye').innerHTML = `On this system, FFI is only <strong>${overheadPct}% slower</strong> than the native extension. FFI outperforms the C-extension in <strong>${ffiWins}</strong> functions (${((ffiWins/comparedResults.length)*100).toFixed(0)}% of the API).`;
+                const validRatios = comparedResults.map(e => e[1].ratios.mean).filter(r => !isNaN(r) && isFinite(r));
+                if (validRatios.length > 0) {
+                    const sortedRatios = validRatios.sort((a,b) => a-b);
+                    const medianRatio = sortedRatios[Math.floor(sortedRatios.length / 2)];
+                    const overheadPct = ((medianRatio - 1) * 100).toFixed(0);
+                    document.getElementById('overall-median').innerText = (overheadPct > 0 ? '+' : '') + overheadPct + '%';
+                    document.getElementById('status-text').innerText = medianRatio < 1.3 ? 'PRO-TIER PERFORMANCE' : 'STANDARD OVERHEAD';
+                    document.getElementById('status-text').style.color = medianRatio < 1.3 ? 'var(--success)' : 'var(--primary)';
+                    
+                    const ffiWins = comparedResults.filter(e => e[1].ratios.mean < 1.0).length;
+                    const winPct = ((ffiWins/comparedResults.length)*100).toFixed(0);
+                    document.getElementById('birds-eye').innerHTML = `On this system, FFI is only <strong>${overheadPct}% slower</strong> than the native extension at the median. FFI actually <strong>beats</strong> the C-extension in <strong>${ffiWins}</strong> functions (${winPct}% of the API).`;
+                } else {
+                    showFfiOnly(currentKey);
+                }
             } else {
-                document.getElementById('overall-median').innerText = 'FFI-ONLY';
-                document.getElementById('status-text').innerText = 'PROFILING MODE';
-                document.getElementById('birds-eye').innerText = 'Detailed FFI latency profiling for ' + currentKey + '. C-Extension comparison data was not captured for this platform.';
+                showFfiOnly(currentKey);
             }
 
             renderTable(document.getElementById('searchInput').value);
             renderChart(comparedResults.length > 0 ? comparedResults : resultEntries);
+        }
+
+        function showFfiOnly(key) {
+            document.getElementById('overall-median').innerText = 'FFI-ONLY';
+            document.getElementById('status-text').innerText = 'PROFILING MODE';
+            document.getElementById('status-text').style.color = 'var(--primary)';
+            document.getElementById('birds-eye').innerText = 'High-precision FFI latency profiling for ' + key + '. Native C-Extension comparison data was not captured for this specific platform build.';
         }
 
         function renderTable(q = '') {
@@ -269,4 +278,4 @@ HTML;
 
 $html = str_replace('{{DATA}}', json_encode($allData), $html);
 file_put_contents(__DIR__ . '/benchmark.html', $html);
-echo "✅ True Transparency Multi-System Dashboard Created: docs/benchmark/benchmark.html\n";
+echo "✅ True Transparency Multi-System Dashboard Updated: docs/benchmark/benchmark.html\n";

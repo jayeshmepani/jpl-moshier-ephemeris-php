@@ -176,7 +176,10 @@ class UltimateBenchmark
     {
         set_time_limit(0);
         echo "════════════════════════════════════════════════════════════════\n";
-        echo "  STRICT 1000-ITERATION LOSSLESS BENCHMARK (106 FUNCTIONS)\n";
+        echo "  STRICT PERFORMANCE AUDIT: LOSSLESS MODE\n";
+        echo "  - Warmup Iterations:    $w\n";
+        echo "  - Measurement Samples:  $n\n";
+        echo "  - Total API Functions:  " . count($this->config) . "\n";
         echo "════════════════════════════════════════════════════════════════\n\n";
 
         foreach ($this->config as $name => $args) {
@@ -302,7 +305,12 @@ class UltimateBenchmark
 
     private function benchExt(string $name, array $args, int $n, int $w, &$last_res, &$err): ?array
     {
-        if (!function_exists($name)) { $err = "NOT_FOUND"; return null; }
+        // On Windows, the extension is often named php_swephp.dll
+        $extName = (PHP_OS_FAMILY === 'Windows') ? 'php_swephp' : 'swephp';
+        if (!extension_loaded($extName) && !function_exists($name)) {
+            $err = "NOT_FOUND";
+            return null;
+        }
         try {
             $rf = new ReflectionFunction($name);
             $ext_args = [];

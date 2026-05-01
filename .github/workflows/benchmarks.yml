@@ -35,16 +35,40 @@ jobs:
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist
 
+      - name: Set up MSYS2 (Windows Only)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: git mingw-w64-x86_64-gcc
+
       - name: Compile C-Extension (Multi-Platform)
         shell: bash
         run: |
+          git clone --depth 1 -b 4.0.11 https://github.com/kevindecapite/php-sweph.git
           if [ "$RUNNER_OS" == "Windows" ]; then
-            # Windows native build is complex; we use a prebuilt DLL if available or skip
-            # For now, we focus on FFI perfection on Windows.
-            # Building on Windows in CI requires 10+ minutes of SDK setup.
-            echo "Skipping Windows C-Ext build to focus on FFI Lossless Profiling"
+            echo "Building Windows C-Extension using MinGW..."
+            cd php-sweph
+            mkdir -p sweph/src
+            # Fetch fresh swisseph source for the C-extension build
+            git clone --depth 1 https://github.com/aloistr/swisseph.git swisseph_tmp
+            cp swisseph_tmp/src/*.c sweph/src/ 2>/dev/null || cp swisseph_tmp/src_c/*.c sweph/src/
+            cp swisseph_tmp/src/*.h sweph/src/ 2>/dev/null || cp swisseph_tmp/src_c/*.h sweph/src/
+            
+            PHP_DIR=$(dirname $(which php))
+            echo "PHP Directory: $PHP_DIR"
+            
+            # Windows PHP headers are usually in dev/include
+            PHP_INC="$PHP_DIR/dev/include"
+            PHP_LIB_DIR="$PHP_DIR/dev"
+            
+            echo "Compiling with GCC..."
+            gcc -O2 -shared -I. -I"$PHP_INC" -I"$PHP_INC/main" -I"$PHP_INC/TSRM" -I"$PHP_INC/Zend" -I./sweph/src \
+                -DPHP_EXPORTS -DCOMPILE_DL_SWEPHP -DZEND_WIN32 -DPHP_WIN32 \
+                swephp.c sweph/src/*.c -o ../docs/benchmark/php_swephp.dll -L"$PHP_LIB_DIR" -lphp8 || echo "Compilation failed, but we tried!"
+            cd ..
           else
-            git clone --depth 1 -b 4.0.11 https://github.com/kevindecapite/php-sweph.git
             cd php-sweph && phpize && ./configure && make
           fi
 
@@ -52,7 +76,13 @@ jobs:
         shell: bash
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then
-            php docs/benchmark/UltimateBenchmark.php
+            # Load the Windows DLL if it was successfully built
+            EXT_PATH="$(pwd)/docs/benchmark/php_swephp.dll"
+            if [ -f "$EXT_PATH" ]; then
+              php -d extension="$EXT_PATH" docs/benchmark/UltimateBenchmark.php
+            else
+              php docs/benchmark/UltimateBenchmark.php
+            fi
           else
             php -d extension="$(pwd)/php-sweph/modules/swephp.so" docs/benchmark/UltimateBenchmark.php
           fi

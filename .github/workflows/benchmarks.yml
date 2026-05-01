@@ -58,22 +58,20 @@ jobs:
             cp swisseph_tmp/src/*.h sweph/src/ 2>/dev/null || cp swisseph_tmp/*.h sweph/src/ 2>/dev/null || true
             
             # Download matching Devel Pack for headers/libs
-            PHP_VER=$(php -v | head -n 1 | cut -d ' ' -f 2)
+            PHP_VER=$(php -v | head -n 1 | cut -d " " -f 2)
             echo "Detected PHP Version: $PHP_VER"
             
-            # Construct download URL (assuming x64 NTS which is standard for GH runners)
-            # We use a robust PowerShell download
-            powershell <<'POWERSHELL_EOF'
-              $phpVer = (php -v)[0].Split(' ')[1]
-              echo "Downloading Devel Pack for $phpVer..."
-              $url = "https://windows.php.net/downloads/releases/php-devel-pack-$phpVer-Win32-vs16-x64.zip"
-              try {
-                Invoke-WebRequest -Uri $url -OutFile "php-devel.zip"
-                Expand-Archive -Path "php-devel.zip" -DestinationPath "php-sdk-root"
-              } catch {
-                echo "Exact version pack not found. Building with FFI only."
-              }
-POWERSHELL_EOF
+            # Use PowerShell to download and extract the SDK without a heredoc
+            powershell -Command "
+                $phpVer = (php -v)[0].Split(' ')[1];
+                echo 'Downloading Devel Pack for $phpVer...';
+                $url = \"https://windows.php.net/downloads/releases/php-devel-pack-$phpVer-Win32-vs16-x64.zip\";
+                try {
+                    Invoke-WebRequest -Uri $url -OutFile 'php-devel.zip';
+                    Expand-Archive -Path 'php-devel.zip' -DestinationPath 'php-sdk-root';
+                } catch {
+                    echo 'Exact version pack not found. Building with FFI only.';
+                }"
             
             if [ -d "php-sdk-root" ]; then
                 # Locate headers and libs in the extracted pack

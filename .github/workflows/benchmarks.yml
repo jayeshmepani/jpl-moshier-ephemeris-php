@@ -65,7 +65,7 @@ jobs:
           }
           '@ | Set-Content -Path php-sweph\config.w32 -Encoding ASCII
 
-          Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module -Name BuildPhpExtension -Repository PSGallery -Force -Scope CurrentUser
 

@@ -48,42 +48,49 @@ jobs:
         run: |
           git clone --depth 1 -b 4.0.11 https://github.com/kevindecapite/php-sweph.git
           if [ "$RUNNER_OS" == "Windows" ]; then
-            echo "Building Windows C-Extension using MinGW..."
+            echo "Provisioning PHP SDK for Windows build..."
             cd php-sweph
             mkdir -p sweph/src
             
-            # Fetch fresh swisseph source for the C-extension build
+            # Fetch fresh swisseph source
             git clone --depth 1 https://github.com/aloistr/swisseph.git swisseph_tmp
-            if [ -d "swisseph_tmp/src" ]; then
-                cp swisseph_tmp/src/*.c sweph/src/
-                cp swisseph_tmp/src/*.h sweph/src/
+            cp swisseph_tmp/src/*.c sweph/src/ 2>/dev/null || cp swisseph_tmp/*.c sweph/src/ 2>/dev/null || true
+            cp swisseph_tmp/src/*.h sweph/src/ 2>/dev/null || cp swisseph_tmp/*.h sweph/src/ 2>/dev/null || true
+            
+            # Download matching Devel Pack for headers/libs
+            PHP_VER=$(php -v | head -n 1 | cut -d ' ' -f 2)
+            echo "Detected PHP Version: $PHP_VER"
+            
+            # Construct download URL (assuming x64 NTS which is standard for GH runners)
+            # We use a robust PowerShell download
+            powershell <<'EOF'
+              $ver = "${{ steps.setup-php.outputs.php-version }}"
+              # Find exact version
+              $phpVer = (php -v)[0].Split(' ')[1]
+              echo "Downloading Devel Pack for $phpVer..."
+              $url = "https://windows.php.net/downloads/releases/php-devel-pack-$phpVer-Win32-vs16-x64.zip"
+              try {
+                Invoke-WebRequest -Uri $url -OutFile "php-devel.zip"
+                Expand-Archive -Path "php-devel.zip" -DestinationPath "php-sdk-root"
+              } catch {
+                # Fallback to a broader search if exact version download fails
+                echo "Exact version pack not found. Building with FFI only."
+              }
+EOF
+            
+            if [ -d "php-sdk-root" ]; then
+                # Locate headers and libs in the extracted pack
+                INC_DIR=$(find "$(pwd)/php-sdk-root" -name "php.h" | head -n 1 | xargs dirname | xargs dirname)
+                LIB_DIR=$(find "$(pwd)/php-sdk-root" -name "php8.lib" -o -name "php8ts.lib" | head -n 1 | xargs dirname)
+                LIB_NAME=$(find "$(pwd)/php-sdk-root" -name "php8.lib" -o -name "php8ts.lib" | head -n 1 | xargs basename | sed 's/\.lib//')
+                
+                echo "Compiling with GCC using SDK headers..."
+                gcc -O2 -shared -I. -I"$INC_DIR" -I"$INC_DIR/main" -I"$INC_DIR/TSRM" -I"$INC_DIR/Zend" -I./sweph/src \
+                    -DPHP_EXPORTS -DCOMPILE_DL_SWEPHP -DZEND_WIN32 -DPHP_WIN32 \
+                    swephp.c sweph/src/*.c -o ../docs/benchmark/php_swephp.dll -L"$LIB_DIR" -l$LIB_NAME
             else
-                cp swisseph_tmp/*.c sweph/src/ 2>/dev/null || true
-                cp swisseph_tmp/*.h sweph/src/ 2>/dev/null || true
+                echo "SDK Provisioning failed. Comparison will be FFI-Only for this run."
             fi
-            
-            PHP_DIR=$(dirname $(which php))
-            echo "PHP Directory: $PHP_DIR"
-            
-            # Locate PHP headers dynamically
-            PHP_INC=$(find "$PHP_DIR" -name "php.h" | head -n 1 | xargs dirname | xargs dirname)
-            if [ -z "$PHP_INC" ]; then
-              # Fallback to standard setup-php paths
-              PHP_INC="$PHP_DIR/include"
-            fi
-            echo "PHP Include Root: $PHP_INC"
-            
-            # Locate PHP library for linking
-            PHP_LIB_DIR=$(find "$PHP_DIR" -name "php8.lib" -o -name "php8ts.lib" | head -n 1 | xargs dirname)
-            PHP_LIB_NAME=$(find "$PHP_DIR" -name "php8.lib" -o -name "php8ts.lib" | head -n 1 | xargs basename | sed 's/\.lib//')
-            
-            echo "PHP Lib Dir: $PHP_LIB_DIR"
-            echo "PHP Lib Name: $PHP_LIB_NAME"
-            
-            echo "Compiling with GCC..."
-            gcc -O2 -shared -I. -I"$PHP_INC" -I"$PHP_INC/main" -I"$PHP_INC/TSRM" -I"$PHP_INC/Zend" -I./sweph/src \
-                -DPHP_EXPORTS -DCOMPILE_DL_SWEPHP -DZEND_WIN32 -DPHP_WIN32 \
-                swephp.c sweph/src/*.c -o ../docs/benchmark/php_swephp.dll -L"$PHP_LIB_DIR" -l$PHP_LIB_NAME || echo "Compilation failed, but we tried!"
             cd ..
           else
             cd php-sweph && phpize && ./configure && make

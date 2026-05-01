@@ -8,6 +8,9 @@ on:
       - 'src/**'
       - 'docs/benchmark/**'
 
+permissions:
+  contents: write
+
 jobs:
   profile:
     name: Profile on ${{ matrix.os }}

@@ -22,7 +22,7 @@ use RuntimeException;
  * - Direct C library calls without process spawning
  * - No text parsing - all values are native PHP types
  * - Framework-agnostic (works with Laravel, Symfony, or plain PHP)
- * - Pre-compiled libswe.so included for Linux x64
+ * - Pre-compiled Swiss Ephemeris libraries included for supported platforms
  * - All 106 functions from official C library (100% coverage)
  *
  * @example
@@ -401,10 +401,11 @@ final class SwissEphFFI
     /**
      * Initialize Swiss Ephemeris FFI.
      *
-     * Loads the Swiss Ephemeris shared library (libswe.so) and initializes FFI.
+     * Loads the Swiss Ephemeris shared library and initializes FFI.
      * Uses singleton pattern - only one FFI instance is created per request.
+     * If an instance is already initialized, later custom library paths are ignored.
      *
-     * @param string|null $libraryPath Optional custom path to libswe.so.
+     * @param string|null $libraryPath Optional custom path to libswe.so, libswe.dylib, or swe.dll.
      *                                 If null, searches common locations automatically.
      *
      * @throws RuntimeException If library file is not found or FFI fails to load

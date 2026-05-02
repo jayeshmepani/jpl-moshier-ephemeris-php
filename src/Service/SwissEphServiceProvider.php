@@ -18,7 +18,7 @@ use SwissEph\FFI\SwissEphFFI;
  * Features:
  * - Singleton registration (one instance per request)
  * - Automatic configuration merging
- * - Publishable config and library files
+ * - Publishable config and native library files
  * - Facade alias support
  *
  * @author Jayesh Patel <jayeshmepani777@gmail.com>
@@ -55,6 +55,7 @@ final class SwissEphServiceProvider extends ServiceProvider
      *
      * Registers publishable resources:
      * - config/swisseph.php → config_path('swisseph.php')
+     * - current platform native library → storage_path('app/swisseph/<library>')
      */
     public function boot(): void
     {
@@ -65,7 +66,7 @@ final class SwissEphServiceProvider extends ServiceProvider
         $library = $this->findPublishableLibrary();
         if ($library !== null) {
             $this->publishes([
-                $library => public_path(basename($library)),
+                $library => storage_path('app/swisseph/' . basename($library)),
             ], 'swisseph-library');
         }
     }

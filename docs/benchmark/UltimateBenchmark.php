@@ -400,15 +400,7 @@ class UltimateBenchmark
             return null;
         }
         try {
-            $rf = new ReflectionFunction($name);
-            $ext_args = [];
-            foreach ($rf->getParameters() as $idx => $p) {
-                if ($p->getName() === 'hsys') { $ext_args[] = 'P'; } elseif (isset($args[$idx]) && !($args[$idx] instanceof CData)) { $ext_args[] = $args[$idx]; } else {
-                    $type = $p->getType();
-                    $tname = $type instanceof ReflectionNamedType ? $type->getName() : '';
-                    if ($tname === 'float') { $ext_args[] = 0.0; } elseif ($tname === 'int') { $ext_args[] = 0; } elseif ($tname === 'string') { $ext_args[] = ''; } else { $ext_args[] = 0; }
-                }
-            }
+            $ext_args = $this->extensionArgs($name, $args);
 
             // Strict 100 warmup iterations
             for ($i = 0; $i < $w; $i++) { @$name(...$ext_args); }
@@ -425,6 +417,52 @@ class UltimateBenchmark
             $stats['mem'] = memory_get_usage(true) - $m0;
             return $stats;
         } catch (Throwable $e) { $err = $e->getMessage(); return null; }
+    }
+
+    private function extensionArgs(string $name, array $args): array
+    {
+        return match ($name) {
+            'swe_heliacal_ut', 'swe_heliacal_pheno_ut' => [
+                2452275.5, 121.34, 43.57, 100.0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                'Venus', 1, 2,
+            ],
+            'swe_vis_limit_mag' => [
+                2452275.5, 121.34, 43.57, 100.0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                'Venus', 2,
+            ],
+            default => $this->reflectedExtensionArgs($name, $args),
+        };
+    }
+
+    private function reflectedExtensionArgs(string $name, array $args): array
+    {
+        $rf = new ReflectionFunction($name);
+        $ext_args = [];
+        foreach ($rf->getParameters() as $idx => $p) {
+            if ($p->getName() === 'hsys') {
+                $ext_args[] = 'P';
+            } elseif (isset($args[$idx]) && !($args[$idx] instanceof CData)) {
+                $ext_args[] = $args[$idx];
+            } else {
+                $type = $p->getType();
+                $tname = $type instanceof ReflectionNamedType ? $type->getName() : '';
+                if ($tname === 'float') {
+                    $ext_args[] = 0.0;
+                } elseif ($tname === 'int') {
+                    $ext_args[] = 0;
+                } elseif ($tname === 'string') {
+                    $ext_args[] = '';
+                } else {
+                    $ext_args[] = 0;
+                }
+            }
+        }
+
+        return $ext_args;
     }
 
     private function checkAccuracy(string $name, $ffi_ret, $ext_ret): bool

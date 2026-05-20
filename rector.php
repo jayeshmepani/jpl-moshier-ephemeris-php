@@ -15,7 +15,7 @@ return RectorConfig::configure()
     ->withDeadCodeLevel(1)
     ->withCodeQualityLevel(1)
     ->withSkip([
-        __DIR__ . '/src/FFI/SwissEphFFI.php',
+        __DIR__ . '/src/FFI/JmeEphFFI.php',
     ])
     ->withParallel()
     ->withImportNames(false, true);

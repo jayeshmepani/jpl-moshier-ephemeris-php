@@ -8,7 +8,7 @@
          displayDetailsOnTestsThatTriggerNotices="true">
     <testsuites>
         <testsuite name="Main">
-            <file>tests/SwissEphFFITest.php</file>
+            <file>tests/JmeEphFFITest.php</file>
         </testsuite>
     </testsuites>
     <source>

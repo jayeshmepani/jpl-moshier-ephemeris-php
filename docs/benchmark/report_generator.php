@@ -29,7 +29,7 @@ $html = <<<'HTML'
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Swiss Ephemeris Multi-OS Performance Audit</title>
+    <title>JME Multi-OS Performance Audit</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
@@ -249,7 +249,7 @@ $html = <<<'HTML'
             myChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: top30.map(e => e[0].replace('swe_', '')),
+                    labels: top30.map(e => e[0].replace('jme_', '')),
                     datasets: [
                         { label: 'FFI Implementation', data: top30.map(e => e[1].ffi.mean), backgroundColor: '#3b82f6' },
                         { label: 'C-Extension', data: top30.map(e => e[1].ext ? e[1].ext.mean : 0), backgroundColor: '#ef4444' }

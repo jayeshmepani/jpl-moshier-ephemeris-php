@@ -1,9 +1,8 @@
 {
-    "name": "jayeshmepani/swiss-ephemeris-ffi",
-    "description": "Complete 100% 1:1 PHP FFI Wrapper for the Swiss Ephemeris C Library - Direct C function calls with zero abstraction for maximum astronomical precision",
+    "name": "jayeshmepani/jpl-moshier-ephemeris-ffi",
+    "description": "Complete 100% 1:1 PHP FFI Wrapper for the JPL Moshier Ephemeris C Library - Direct C function calls with zero abstraction for maximum astronomical precision",
     "type": "library",
     "keywords": [
-        "swiss-ephemeris",
         "astrology",
         "astronomy",
         "ffi",
@@ -24,9 +23,9 @@
         "laravel-package",
         "php-library"
     ],
-    "homepage": "https://github.com/jayeshmepani/Swiss-Ephemeris-PHP",
+    "homepage": "https://github.com/jayeshmepani/jpl-moshier-ephemeris-php",
     "readme": "README.md",
-    "license": "AGPL-3.0-or-later",
+    "license": "MIT",
     "minimum-stability": "stable",
     "prefer-stable": true,
     "authors": [
@@ -38,8 +37,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/jayeshmepani/Swiss-Ephemeris-PHP/issues",
-        "source": "https://github.com/jayeshmepani/Swiss-Ephemeris-PHP",
+        "issues": "https://github.com/jayeshmepani/jpl-moshier-ephemeris-php/issues",
+        "source": "https://github.com/jayeshmepani/jpl-moshier-ephemeris-php",
         "email": "jayeshmepani777@gmail.com"
     },
     "funding": [
@@ -67,21 +66,21 @@
     },
     "autoload": {
         "psr-4": {
-            "SwissEph\\": "src/"
+            "JmeEph\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "SwissEph\\Tests\\": "tests/"
+            "JmeEph\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "SwissEph\\Service\\SwissEphServiceProvider"
+                "JmeEph\\Service\\JmeEphServiceProvider"
             ],
             "aliases": {
-                "SwissEph": "SwissEph\\Service\\SwissEphFacade"
+                "JmeEph": "JmeEph\\Service\\JmeEphFacade"
             }
         }
     },
@@ -100,12 +99,12 @@
             "Composer\\Config::disableProcessTimeout",
             "php build/build.php"
         ],
-        "swisseph:fetch-libs": "php build/fetch-prebuilt.php",
+        "jme:fetch-libs": "php build/fetch-prebuilt.php",
         "post-install-cmd": [
-            "@swisseph:fetch-libs"
+            "@jme:fetch-libs"
         ],
         "post-update-cmd": [
-            "@swisseph:fetch-libs"
+            "@jme:fetch-libs"
         ],
         "test": "phpunit",
         "phpstan": "phpstan analyse --memory-limit=2G",

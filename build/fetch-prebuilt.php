@@ -11,9 +11,9 @@ $arch = match (true) {
 };
 
 $platform = match ($family) {
-    'Windows' => ['dir' => 'windows-' . $arch, 'file' => 'swe.dll', 'asset' => 'libswe-windows-' . $arch . '.zip'],
-    'Darwin' => ['dir' => 'macos-' . $arch, 'file' => 'libswe.dylib', 'asset' => 'libswe-macos-' . $arch . '.tar.gz'],
-    default => ['dir' => 'linux-' . $arch, 'file' => 'libswe.so', 'asset' => 'libswe-linux-' . $arch . '.tar.gz'],
+    'Windows' => ['dir' => 'windows-' . $arch, 'file' => 'jme.dll', 'asset' => 'jme-windows-' . $arch . '.zip'],
+    'Darwin' => ['dir' => 'macos-' . $arch, 'file' => 'libjme.dylib', 'asset' => 'jme-macos-' . $arch . '.tar.gz'],
+    default => ['dir' => 'linux-' . $arch, 'file' => 'libjme.so', 'asset' => 'jme-linux-' . $arch . '.tar.gz'],
 };
 
 $outDir = $root . '/libs/' . $platform['dir'];
@@ -24,15 +24,29 @@ if (file_exists($outFile)) {
     exit(0);
 }
 
-$skip = getenv('SWISSEPH_SKIP_DOWNLOAD');
+$localCandidates = array_filter([
+    getenv('JME_LIBRARY_PATH') ?: null,
+    dirname($root, 2) . '/jpl-ephemeris-/build/' . $platform['file'],
+]);
+
+foreach ($localCandidates as $candidate) {
+    if (is_file($candidate)) {
+        @mkdir($outDir, 0775, true);
+        copy($candidate, $outFile);
+        echo "Prebuilt library copied from local JME build: {$outFile}\n";
+        exit(0);
+    }
+}
+
+$skip = getenv('JME_SKIP_DOWNLOAD');
 if (is_string($skip) && $skip !== '') {
-    echo "SWISSEPH_SKIP_DOWNLOAD is set; skipping download.\n";
+    echo "JME_SKIP_DOWNLOAD is set; skipping download.\n";
     exit(0);
 }
 
-$repo = getenv('SWISSEPH_LIBS_REPO') ?: 'jayeshmepani/Swiss-Ephemeris-PHP';
-$release = getenv('SWISSEPH_LIBS_RELEASE') ?: 'latest';
-$baseUrl = getenv('SWISSEPH_LIBS_BASE_URL') ?: "https://github.com/{$repo}/releases/{$release}/download";
+$repo = getenv('JME_LIBS_REPO') ?: 'jayeshmepani/jpl-moshier-ephemeris-php';
+$release = getenv('JME_LIBS_RELEASE') ?: 'latest';
+$baseUrl = getenv('JME_LIBS_BASE_URL') ?: "https://github.com/{$repo}/releases/{$release}/download";
 $url = rtrim($baseUrl, '/') . '/' . $platform['asset'];
 
 echo "Downloading prebuilt library: {$url}\n";
@@ -43,7 +57,7 @@ $tmpFile = $tmpDir . '/' . $platform['asset'];
 
 $data = @file_get_contents($url);
 if ($data === false) {
-    fwrite(STDERR, "Failed to download prebuilt library. Set SWISSEPH_LIBRARY_PATH or run composer build.\n");
+    fwrite(STDERR, "Failed to download prebuilt library. Set JME_LIBRARY_PATH or run composer build.\n");
     exit(1);
 }
 file_put_contents($tmpFile, $data);

@@ -1,6 +1,6 @@
-# Contributing to Swiss Ephemeris PHP FFI
+# Contributing to JPL Moshier Ephemeris PHP FFI
 
-Thank you for considering contributing to Swiss Ephemeris PHP FFI! I appreciate your interest in making my package better.
+Thank you for considering contributing to JPL Moshier Ephemeris PHP FFI. This package targets the project-owned `jme_*` API and should not reintroduce Swiss compatibility as the primary contract.
 
 ## Code of Conduct
 
@@ -17,7 +17,7 @@ Before creating bug reports, please check the existing issues as you might find 
 * **Provide specific examples to demonstrate the steps**
 * **Describe the behavior you observed and what behavior you expected**
 * **Include error messages and stack traces if applicable**
-* **Include your PHP version, OS, and Swiss Ephemeris version**
+* **Include your PHP version, OS, and native JME library version**
 
 ### Suggesting Enhancements
 
@@ -46,14 +46,14 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 * PHP 8.3 or higher with FFI extension enabled
 * Composer
 * Git
-* C compiler (gcc) for building libswe.so (optional, pre-built binaries included)
+* C compiler (gcc) for building `libjme.so` if needed
 
 ### Installation
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/Swiss-Ephemeris-PHP.git
-cd Swiss-Ephemeris-PHP
+git clone https://github.com/YOUR_USERNAME/jpl-moshier-ephemeris-php.git
+cd jpl-moshier-ephemeris-php
 
 # Install dependencies
 composer install

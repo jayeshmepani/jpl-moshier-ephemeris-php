@@ -8,22 +8,30 @@ This package wraps the project-owned `jme_*` C API from `/home/shreesoftech/proj
 
 - Primary public functions: `jme_*`
 - Primary public constants: `JME_*`
-- Current wrapper coverage: 191 native `jme_*` functions and all 460 constants tracked by the native API inventory
+- Current wrapper target: all 204 public `jme_*` functions tracked by the native API inventory
+- Native headers contain 462 `JME_*` tokens including two header guards; the PHP wrapper exposes the semantic native constants and preserves existing compatibility aliases where present
 - Native backend: `libjme.so`, `libjme.dylib`, or `jme.dll`
 - No hidden rounding, output reshaping, or dropped status/error buffers
 - Incomplete native behavior should return `JME_ERR` from the C library rather than pretending to provide production ephemeris output
 
 Swiss Ephemeris names may only belong in a separate migration adapter if one is deliberately added. The main wrapper, examples, and tests should use JME naming.
 
-## Calculation Paths
+## Engine Selection
 
-The low-level `JmeEphFFI` class exposes every native function directly. The optional Laravel-style `JmeService::calc()` convenience method supports these paths:
+The low-level `JmeEphFFI` class exposes every native function directly. The optional Laravel-style `JmeService::calc()` convenience method sets `ENGINE=...` through `jme_set_astro_models()` and then calls `jme_calc()`:
 
-- `native`: calls `jme_calc()` and lets the C core decide JPL/fallback behavior
-- `moshier`: calls `jme_moshier_planet_state()` directly; currently a partial planetary analytical path
-- `vsop87`: calls `jme_vsop87_planet_state()` directly; currently a partial analytical path
+- `AUTO`: let the native C core choose its standard JPL/fallback policy
+- `JPL`: require JPL kernel-backed behavior
+- `MOSHIER`: force Moshier analytical behavior
+- `VSOP_ELP_MEEUS`: force VSOP87/ELP2000/Meeus analytical behavior
+- `ANALYTICAL`: use the native analytical engine mode
 
-Use direct `jme_jpl_*` calls for raw JPL/CALCEPH kernel access. Do not treat the PHP convenience path as proof that every high-level algorithm is complete; native status is governed by the C library’s return codes and error buffers.
+Backward-compatible aliases accepted by `JmeService`:
+
+- `native` -> `AUTO`
+- `vsop87` -> `VSOP_ELP_MEEUS`
+
+Use direct `jme_jpl_*` calls for raw JPL/CALCEPH kernel access. The PHP layer does not normalize or reinterpret native outputs.
 
 ## Requirements
 
@@ -31,10 +39,10 @@ Use direct `jme_jpl_*` calls for raw JPL/CALCEPH kernel access. Do not treat the
 - PHP FFI extension (`ext-ffi`)
 - A compiled JME shared library
 
-By default, local development uses:
+By default, the wrapper loads the bundled platform library from this package, for example:
 
 ```text
-/home/shreesoftech/projects/test1/astro_packages/jpl-ephemeris-/build/libjme.so
+/home/shreesoftech/projects/test1/astro_packages/user-ffi-wrappers/jpl-moshier-ephemeris-php/libs/linux-x64/libjme.so
 ```
 
 Override it with:
@@ -81,7 +89,14 @@ if ($result === JmeEphFFI::JME_OK) {
 
 ```bash
 composer install
+composer verify:surface
 composer test
 ```
 
 The test suite verifies the PHP wrapper against the JME-native contract, including function inventory coverage, constant inventory coverage, key `JME_*` values, and convenience calculation paths. Set `JME_SOURCE_PATH` if the native source tree is not at the default local path.
+
+`composer verify:surface` performs an exact low-level surface audit of the generated wrapper:
+
+- `204` tracked `jme_*` declarations compared against the native header prototypes
+- `462` `JME_*` constants compared against native header values
+- numeric constants cross-checked through a compiled C probe instead of trusting PHP generation alone

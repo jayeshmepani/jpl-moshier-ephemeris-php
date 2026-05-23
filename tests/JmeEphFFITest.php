@@ -54,34 +54,33 @@ final class JmeEphFFITest extends TestCase
     {
         $nativeRoot = getenv('JME_SOURCE_PATH') ?: '/home/shreesoftech/projects/test1/astro_packages/jpl-ephemeris-';
 
-        if (! is_file($nativeRoot . '/include/jme/jme.h')) {
+        if (! is_file($nativeRoot . '/docs/API_TRACKING.md')) {
             $this->markTestSkipped('Native JME source tree is not available for inventory comparison.');
         }
+
+        $apiTracking = file_get_contents($nativeRoot . '/docs/API_TRACKING.md');
+        preg_match_all('/\|\s*\d+\s*\|\s*`(jme_[A-Za-z0-9_]+)`\s*\|/', $apiTracking, $nativeFunctionMatches);
+        $nativeFunctions = array_values(array_unique($nativeFunctionMatches[1]));
+
+        $wrapperSource = file_get_contents(__DIR__ . '/../src/FFI/JmeEphFFI.php');
+        $missingFunctions = array_values(array_filter(
+            $nativeFunctions,
+            static fn (string $name): bool => ! preg_match('/\b' . preg_quote($name, '/') . '\b/', $wrapperSource)
+        ));
+
+        $this->assertSame([], $missingFunctions);
+        $this->assertCount(204, $nativeFunctions);
 
         $nativeHeaders = file_get_contents($nativeRoot . '/include/jme/jme.h')
             . "\n"
             . file_get_contents($nativeRoot . '/include/jme/jme_extended.h');
-        preg_match_all('/\b(?:const char \*|char \*|int|double|void)\s+(jme_[A-Za-z0-9_]+)\s*\(/', $nativeHeaders, $nativeFunctionMatches);
-        $nativeFunctions = array_values(array_unique($nativeFunctionMatches[1]));
-
-        $wrapperSource = file_get_contents(__DIR__ . '/../src/FFI/JmeEphFFI.php');
-        preg_match_all('/\b(?:const char \*|char \*|int|double|void)\s+(jme_[A-Za-z0-9_]+)\s*\(/', $wrapperSource, $wrapperFunctionMatches);
-        $wrapperFunctions = array_values(array_unique($wrapperFunctionMatches[1]));
-
-        $this->assertSame([], array_values(array_diff($nativeFunctions, $wrapperFunctions)));
-        $this->assertCount(191, $nativeFunctions);
-        $this->assertCount(191, $wrapperFunctions);
-
-        preg_match_all('/\|\s*\d+\s*\|\s*`(JME_[A-Z0-9_]+)`\s*\|/', file_get_contents($nativeRoot . '/docs/API_TRACKING.md'), $nativeConstantMatches);
-        $nativeConstants = array_values(array_filter(
-            array_unique($nativeConstantMatches[1]),
-            static fn (string $name): bool => ! in_array($name, ['JME_EXTENDED_H', 'JME_JME_H'], true)
-        ));
+        preg_match_all('/\b(JME_[A-Z0-9_]+)\b/', $nativeHeaders, $nativeConstantMatches);
+        $nativeConstants = array_values(array_unique($nativeConstantMatches[1]));
         $wrapperConstants = array_keys((new ReflectionClass(JmeEphFFI::class))->getConstants());
 
         $this->assertSame([], array_values(array_diff($nativeConstants, $wrapperConstants)));
-        $this->assertCount(458, $nativeConstants);
-        $this->assertGreaterThanOrEqual(458, count($wrapperConstants));
+        $this->assertCount(462, $nativeConstants);
+        $this->assertCount(462, $wrapperConstants);
     }
 
     public function testVersion(): void
@@ -386,37 +385,46 @@ final class JmeEphFFITest extends TestCase
         $this->assertLessThan(1.1, $xx[2]);
     }
 
-    public function testConvenienceServiceNativePathDelegatesToJmeCalc(): void
+    public function testConvenienceServiceAutoEngineDelegatesToJmeCalc(): void
     {
         $xx = $this->jme->getFFI()->new('double[6]');
         $error = $this->jme->getFFI()->new('char[256]');
-        $service = new JmeService($this->jme, 'native');
+        $models = $this->jme->getFFI()->new('char[256]');
+        $service = new JmeService($this->jme, 'AUTO');
 
         $result = $service->calc(2451545.0, JmeEphFFI::JME_BODY_SUN, JmeEphFFI::JME_CALC_NONE, $xx, $error);
 
         $this->assertSame(JmeEphFFI::JME_OK, $result);
+        $this->assertGreaterThanOrEqual(0, $this->jme->jme_get_astro_models($models, 0));
+        $this->assertStringContainsString('ENGINE=AUTO', FFI::string($models));
         $this->assertIsFloat($xx[0]);
     }
 
-    public function testConvenienceServiceMoshierPathIsPartialPlanetaryPath(): void
+    public function testConvenienceServiceMoshierEngineUsesNativeSelection(): void
     {
         $xx = $this->jme->getFFI()->new('double[6]');
-        $service = new JmeService($this->jme, 'moshier');
+        $models = $this->jme->getFFI()->new('char[256]');
+        $service = new JmeService($this->jme, 'MOSHIER');
 
         $result = $service->calc(2451545.0, JmeEphFFI::JME_BODY_MERCURY, JmeEphFFI::JME_CALC_NONE, $xx);
 
         $this->assertSame(JmeEphFFI::JME_OK, $result);
+        $this->assertGreaterThanOrEqual(0, $this->jme->jme_get_astro_models($models, 0));
+        $this->assertStringContainsString('ENGINE=MOSHIER', FFI::string($models));
         $this->assertIsFloat($xx[0]);
     }
 
-    public function testConvenienceServiceVsop87PathIsPartialAnalyticalPath(): void
+    public function testConvenienceServiceVsopElpMeeusEngineUsesNativeSelection(): void
     {
         $xx = $this->jme->getFFI()->new('double[6]');
-        $service = new JmeService($this->jme, 'vsop87');
+        $models = $this->jme->getFFI()->new('char[256]');
+        $service = new JmeService($this->jme, 'VSOP_ELP_MEEUS');
 
         $result = $service->calc(2451545.0, JmeEphFFI::JME_BODY_MERCURY, JmeEphFFI::JME_CALC_NONE, $xx);
 
         $this->assertSame(JmeEphFFI::JME_OK, $result);
+        $this->assertGreaterThanOrEqual(0, $this->jme->jme_get_astro_models($models, 0));
+        $this->assertStringContainsString('ENGINE=VSOP_ELP_MEEUS', FFI::string($models));
         $this->assertIsFloat($xx[0]);
     }
 
@@ -462,6 +470,17 @@ final class JmeEphFFITest extends TestCase
         $this->jme->jme_copy_body_name(JmeEphFFI::JME_BODY_SUN, $buffer);
 
         $this->assertSame('Sun', FFI::string($buffer));
+    }
+
+    public function testFrameBiasMatrix(): void
+    {
+        $identity = $this->jme->getFFI()->new('double[9]');
+        $bias = $this->jme->getFFI()->new('double[9]');
+
+        $this->assertSame(JmeEphFFI::JME_OK, $this->jme->jme_get_frame_bias_matrix(JmeEphFFI::JME_MODEL_BIAS_NONE, $identity));
+        $this->assertSame(JmeEphFFI::JME_OK, $this->jme->jme_get_frame_bias_matrix(JmeEphFFI::JME_MODEL_BIAS_IAU2006, $bias));
+        $this->assertEqualsWithDelta(1.0, $identity[0], 1e-15);
+        $this->assertTrue(is_finite($bias[0]));
     }
 
     public function testRefraction(): void

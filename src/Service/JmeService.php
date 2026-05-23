@@ -8,29 +8,30 @@ use JmeEph\FFI\JmeEphFFI;
 
 class JmeService
 {
-    private JmeEphFFI $ffi;
-    private string $calculationPath;
+    private readonly string $engine;
 
-    public function __construct(JmeEphFFI $ffi, string $calculationPath = 'native')
+    public function __construct(private readonly JmeEphFFI $ffi, string $engine = 'AUTO')
     {
-        $this->ffi = $ffi;
-        $this->calculationPath = $calculationPath;
+        $this->engine = $this->normalizeEngine($engine);
     }
 
     public function calc(float $jd_et, int $body, int $flags = JmeEphFFI::JME_CALC_NONE, &$results = null, &$error = null)
     {
-        $results = $results ?? $this->ffi->getFFI()->new("double[6]");
-        $error = $error ?? $this->ffi->getFFI()->new("char[256]");
-
-        if ($this->calculationPath === 'moshier') {
-            return $this->ffi->getFFI()->jme_moshier_planet_state($jd_et, $body, $results);
-        }
-
-        if ($this->calculationPath === 'vsop87') {
-            return $this->ffi->getFFI()->jme_vsop87_planet_state($jd_et, $body, $results);
-        }
-
-        // The native C core owns JPL/fallback policy for jme_calc().
+        $results ??= $this->ffi->getFFI()->new('double[6]');
+        $error ??= $this->ffi->getFFI()->new('char[256]');
+        $this->ffi->getFFI()->jme_set_astro_models('ENGINE=' . $this->engine, 0);
         return $this->ffi->getFFI()->jme_calc($jd_et, $body, $flags, $results, $error);
+    }
+
+    private function normalizeEngine(string $engine): string
+    {
+        return match (strtoupper($engine)) {
+            'AUTO', 'NATIVE' => 'AUTO',
+            'JPL' => 'JPL',
+            'MOSHIER' => 'MOSHIER',
+            'VSOP_ELP_MEEUS', 'VSOP87', 'VSOP+ELP+MEEUS' => 'VSOP_ELP_MEEUS',
+            'ANALYTICAL' => 'ANALYTICAL',
+            default => $engine,
+        };
     }
 }

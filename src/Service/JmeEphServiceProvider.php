@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace JmeEph\Service;
 
 use Illuminate\Support\ServiceProvider;
-use Override;
 use JmeEph\FFI\JmeEphFFI;
+use Override;
 
 /**
  * Laravel Service Provider for JPL Moshier Ephemeris FFI.
@@ -47,12 +47,10 @@ final class JmeEphServiceProvider extends ServiceProvider
             return new JmeEphFFI($libraryPath);
         });
 
-        $this->app->singleton(JmeService::class, function ($app) {
-            return new JmeService(
-                $app->make(JmeEphFFI::class),
-                $app->make('config')->get('jmeeph.calculation_path', 'native')
-            );
-        });
+        $this->app->singleton(JmeService::class, fn ($app) => new JmeService(
+            $app->make(JmeEphFFI::class),
+            $app->make('config')->get('jmeeph.engine', $app->make('config')->get('jmeeph.calculation_path', 'AUTO'))
+        ));
 
         $this->app->alias('jmeeph', JmeEphFFI::class);
     }

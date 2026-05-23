@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -7,22 +9,26 @@ return [
     |--------------------------------------------------------------------------
     | Path to the compiled libjme.so / libjme.dylib / jme.dll file.
     */
-    'library_path' => env('JME_LIBRARY_PATH', '/home/shreesoftech/projects/test1/astro_packages/jpl-ephemeris-/build/libjme.so'),
+    'library_path' => env('JME_LIBRARY_PATH', dirname(__DIR__) . '/libs/linux-x64/libjme.so'),
 
     /*
     |--------------------------------------------------------------------------
-    | Calculation Path
+    | Native Engine Selection
     |--------------------------------------------------------------------------
-    | This controls only the PHP convenience JmeService::calc() method.
+    | This controls only the optional PHP convenience JmeService::calc() method.
     | The low-level FFI wrapper always exposes every native jme_* function.
     |
-    | 'native'  -> Call jme_calc(); native C decides JPL/fallback behavior.
-    | 'moshier' -> Call jme_moshier_planet_state(); currently planets only.
-    | 'vsop87'  -> Call jme_vsop87_planet_state(); currently analytical bodies.
+    | 'AUTO'           -> Let the native C core choose its normal engine policy.
+    | 'JPL'            -> Require JPL kernel-backed behavior.
+    | 'MOSHIER'        -> Force Moshier analytical behavior.
+    | 'VSOP_ELP_MEEUS' -> Force VSOP87/ELP2000/Meeus analytical behavior.
+    | 'ANALYTICAL'     -> Native analytical engine mode.
     |
-    | Use direct jme_jpl_* functions for raw JPL/CALCEPH kernel access.
+    | Backward-compatible aliases accepted by JmeService:
+    | 'native' -> AUTO
+    | 'vsop87' -> VSOP_ELP_MEEUS
     */
-    'calculation_path' => env('JME_CALCULATION_PATH', env('JME_ENGINE', 'native')),
+    'engine' => env('JME_ENGINE', env('JME_CALCULATION_PATH', 'AUTO')),
 
     /*
     |--------------------------------------------------------------------------

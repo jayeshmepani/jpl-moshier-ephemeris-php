@@ -6,7 +6,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use JmeEph\FFI\JmeEphFFI;
 
-$jme = new JmeEphFFI();
+$jme = new JmeEphFFI;
 
 $version = $jme->getFFI()->new('char[256]');
 $jme->jme_version($version, 256);

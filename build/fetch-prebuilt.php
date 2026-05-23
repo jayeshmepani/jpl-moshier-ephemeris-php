@@ -1,6 +1,7 @@
 <?php
 
 $root = dirname(__DIR__);
+$nativeRoot = getenv('JME_SOURCE_PATH') ?: $root . '/../../jpl-ephemeris-';
 $family = PHP_OS_FAMILY;
 $arch = strtolower(php_uname('m'));
 
@@ -26,7 +27,7 @@ if (file_exists($outFile)) {
 
 $localCandidates = array_filter([
     getenv('JME_LIBRARY_PATH') ?: null,
-    dirname($root, 2) . '/jpl-ephemeris-/build/' . $platform['file'],
+    $nativeRoot . '/build/' . $platform['file'],
 ]);
 
 foreach ($localCandidates as $candidate) {

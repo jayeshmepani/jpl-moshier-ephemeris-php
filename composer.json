@@ -99,6 +99,7 @@
             "Composer\\Config::disableProcessTimeout",
             "php build/build.php"
         ],
+        "verify:surface": "php build/verify-wrapper-surface.php",
         "jme:fetch-libs": "php build/fetch-prebuilt.php",
         "post-install-cmd": [
             "@jme:fetch-libs"
@@ -107,7 +108,7 @@
             "@jme:fetch-libs"
         ],
         "test": "phpunit",
-        "phpstan": "phpstan analyse --memory-limit=2G",
+        "phpstan": "phpstan analyse --memory-limit=2G --debug",
         "lint": [
             "pint"
         ],
@@ -116,6 +117,7 @@
         ],
         "quality": [
             "@lint:check",
+            "@verify:surface",
             "@phpstan",
             "@test"
         ],

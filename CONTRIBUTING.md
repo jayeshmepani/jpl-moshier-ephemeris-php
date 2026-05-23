@@ -32,7 +32,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 1. **Fork the repository**
 2. **Create a new branch** from `main` with a descriptive name (e.g., `feature/add-house-calculations`, `fix/ffi-pointer-issue`)
-3. **Make your changes** following my coding standards
+3. **Make your changes** following the repository coding standards
 4. **Write or update tests** to cover your changes
 5. **Ensure all tests pass** by running `composer test`
 6. **Run code style checks** with `composer lint`
@@ -116,33 +116,25 @@ composer phpstan
 * Add PHPDoc comments for public methods
 * Keep methods small and focused
 * Write tests for new features
-* Maintain 1:1 compatibility with Swiss Ephemeris C library
+* Maintain compatibility with the project-owned JME native contract
 
 ## Important Notes
 
-### 1:1 C Library Compatibility
+### Native Contract Compatibility
 
-This package aims for **100% 1:1 compatibility** with the Swiss Ephemeris C library. When contributing:
+This package aims for **100% compatibility with the project-owned JME native contract**. When contributing:
 
 * Do NOT change function signatures
 * Do NOT add high-level abstractions to core FFI classes
 * Do NOT remove or rename constants
 * DO maintain exact C data types (double, int32, etc.)
-* DO test against original C library behavior
+* DO test against the JME native library behavior
 
-### Swiss Ephemeris Licensing
+### Native Library Licensing
 
 This repository is licensed under **AGPL-3.0-or-later**.
 
-> **⚠️ Commercial Use Warning**
-> 
-> If you use my package in **SaaS/web applications**, you must either:
-> - Make your source code available under AGPL-3.0, OR
-> - Purchase a commercial license from [Astrodienst](https://www.astro.com/swisseph/swephprice_e.htm)
-> 
-> The Swiss Ephemeris C library upstream also has **AGPL/commercial licensing** - see [Astrodienst](https://www.astro.com/swisseph/swephprice_e.htm) for details.
-
-Contributions to my repository are accepted under AGPL-3.0, while use or redistribution of upstream Swiss Ephemeris binaries/data must respect the upstream license.
+Contributions to this repository are accepted under AGPL-3.0 or later, while any third-party native libraries or data bundled with a deployment must keep their own licenses and notices.
 
 ## Release Process
 

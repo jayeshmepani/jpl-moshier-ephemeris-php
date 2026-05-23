@@ -28,6 +28,16 @@ use RuntimeException;
  */
 class JmeEphFFI
 {
+    /** @var array<string, array{calls: int, ns: int}> */
+    private static array $profile = [];
+
+    /** @var array<string, array<string, true>> */
+    private static array $profileUniqueInputs = [];
+
+    private static ?bool $profileEnabled = null;
+
+    private static bool $profileWritten = false;
+
     public const JME_JME_H = 1;
     public const JME_VERSION = '0.1.0';
     public const JME_AU_KM = 149597870.7;
@@ -715,7 +725,16 @@ CDEF;
 
     public function __call(string $name, array $arguments)
     {
-        return $this->ffi->$name(...$arguments);
+        if (! self::isProfileEnabled()) {
+            return $this->ffi->$name(...$arguments);
+        }
+
+        $start = hrtime(true);
+        try {
+            return $this->ffi->$name(...$arguments);
+        } finally {
+            self::recordProfile($name, hrtime(true) - $start);
+        }
     }
 
     public function jme_julian_day(int $year, int $month, int $day, float $hour, int $calendar): float
@@ -730,67 +749,72 @@ CDEF;
 
     public function jme_set_ephemeris_path(string $path): void
     {
-        $this->ffi->jme_set_ephemeris_path($path);
+        $this->profileVoidCall('jme_set_ephemeris_path', fn (): mixed => $this->ffi->jme_set_ephemeris_path($path));
     }
 
     public function jme_set_astro_models(string $models, int $flags): void
     {
-        $this->ffi->jme_set_astro_models($models, $flags);
+        $this->profileVoidCall('jme_set_astro_models', fn (): mixed => $this->ffi->jme_set_astro_models($models, $flags));
     }
 
     public function jme_calc_ut(float $jd_ut, int $body, int $flags, CData $results, CData $error): int
     {
-        return $this->ffi->jme_calc_ut($jd_ut, $body, $flags, $results, $error);
+        $name = 'jme_calc_ut/body=' . $body . '/flags=' . $flags;
+        if (self::isProfileEnabled()) {
+            self::$profileUniqueInputs[$name][$body . '|' . $flags . '|' . sprintf('%.17g', $jd_ut)] = true;
+        }
+
+        return $this->profileCall($name, fn (): int => $this->ffi->jme_calc_ut($jd_ut, $body, $flags, $results, $error));
     }
 
     public function jme_houses(float $jd_ut, float $geo_lat, float $geo_lon, int $house_system, CData $cusps, CData $ascmc): int
     {
-        return $this->ffi->jme_houses($jd_ut, $geo_lat, $geo_lon, $house_system, $cusps, $ascmc);
+        return $this->profileCall('jme_houses', fn (): int => $this->ffi->jme_houses($jd_ut, $geo_lat, $geo_lon, $house_system, $cusps, $ascmc));
     }
 
     public function jme_get_ayanamsa_ut(float $jd_ut): float
     {
-        return $this->ffi->jme_get_ayanamsa_ut($jd_ut);
+        return $this->profileCall('jme_get_ayanamsa_ut', fn (): float => $this->ffi->jme_get_ayanamsa_ut($jd_ut));
     }
 
     public function jme_lun_eclipse_when(float $jd_start, int $flags, int $iflag, CData $tret, int $backward, CData $error): int
     {
-        return $this->ffi->jme_lun_eclipse_when($jd_start, $flags, $iflag, $tret, $backward, $error);
+        return $this->profileCall('jme_lun_eclipse_when', fn (): int => $this->ffi->jme_lun_eclipse_when($jd_start, $flags, $iflag, $tret, $backward, $error));
     }
 
     public function jme_sol_eclipse_when_glob(float $jd_start, int $flags, int $epheflag, CData $tret, int $backward, CData $error): int
     {
-        return $this->ffi->jme_sol_eclipse_when_glob($jd_start, $flags, $epheflag, $tret, $backward, $error);
+        return $this->profileCall('jme_sol_eclipse_when_glob', fn (): int => $this->ffi->jme_sol_eclipse_when_glob($jd_start, $flags, $epheflag, $tret, $backward, $error));
     }
 
     public function jme_lun_eclipse_how(float $jd_ut, int $flags, CData $geopos, CData $attr, CData $error): int
     {
-        return $this->ffi->jme_lun_eclipse_how($jd_ut, $flags, $geopos, $attr, $error);
+        return $this->profileCall('jme_lun_eclipse_how', fn (): int => $this->ffi->jme_lun_eclipse_how($jd_ut, $flags, $geopos, $attr, $error));
     }
 
     public function jme_lun_eclipse_when_loc(float $jd_start, int $flags, CData $geopos, CData $tret, CData $attr, int $backward, CData $error): int
     {
-        return $this->ffi->jme_lun_eclipse_when_loc($jd_start, $flags, $geopos, $tret, $attr, $backward, $error);
+        return $this->profileCall('jme_lun_eclipse_when_loc', fn (): int => $this->ffi->jme_lun_eclipse_when_loc($jd_start, $flags, $geopos, $tret, $attr, $backward, $error));
     }
 
     public function jme_sol_eclipse_how(float $jd_ut, int $flags, CData $geopos, CData $attr, CData $error): int
     {
-        return $this->ffi->jme_sol_eclipse_how($jd_ut, $flags, $geopos, $attr, $error);
+        return $this->profileCall('jme_sol_eclipse_how', fn (): int => $this->ffi->jme_sol_eclipse_how($jd_ut, $flags, $geopos, $attr, $error));
     }
 
     public function jme_sol_eclipse_when_loc(float $jd_start, int $flags, CData $geopos, CData $tret, CData $attr, int $backward, CData $error): int
     {
-        return $this->ffi->jme_sol_eclipse_when_loc($jd_start, $flags, $geopos, $tret, $attr, $backward, $error);
+        return $this->profileCall('jme_sol_eclipse_when_loc', fn (): int => $this->ffi->jme_sol_eclipse_when_loc($jd_start, $flags, $geopos, $tret, $attr, $backward, $error));
     }
 
     public function jme_jd_to_utc(float $jd, int $calendar, CData $year, CData $month, CData $day, CData $hour, CData $minute, CData $second): void
     {
-        $this->ffi->jme_jd_to_utc($jd, $calendar, $year, $month, $day, $hour, $minute, $second);
+        $this->profileVoidCall('jme_jd_to_utc', fn (): mixed => $this->ffi->jme_jd_to_utc($jd, $calendar, $year, $month, $day, $hour, $minute, $second));
     }
 
     public function jme_rise_trans(float $jd_ut, int $body, ?string $starname, int $flags, int $rsmi, CData $geopos, float $atpress, float $attemp, CData $tret, CData $error): int
     {
-        return $this->ffi->jme_rise_trans($jd_ut, $body, $starname, $flags, $rsmi, $geopos, $atpress, $attemp, $tret, $error);
+        return $this->profileCall('jme_rise_trans', fn (): int => $this->ffi->jme_rise_trans($jd_ut, $body, $starname, $flags, $rsmi, $geopos, $atpress, $attemp, $tret, $error));
     }
 
     public function getFFI(): FFI
@@ -821,5 +845,98 @@ CDEF;
         };
 
         return dirname(__DIR__, 2) . '/libs/' . $dir . '/' . $file;
+    }
+
+    /**
+     * @template T
+     * @param callable(): T $call
+     * @return T
+     */
+    private function profileCall(string $name, callable $call): mixed
+    {
+        if (! self::isProfileEnabled()) {
+            return $call();
+        }
+
+        $start = hrtime(true);
+        try {
+            return $call();
+        } finally {
+            self::recordProfile($name, hrtime(true) - $start);
+        }
+    }
+
+    /** @param callable(): mixed $call */
+    private function profileVoidCall(string $name, callable $call): void
+    {
+        if (! self::isProfileEnabled()) {
+            $call();
+            return;
+        }
+
+        $start = hrtime(true);
+        try {
+            $call();
+        } finally {
+            self::recordProfile($name, hrtime(true) - $start);
+        }
+    }
+
+    private static function isProfileEnabled(): bool
+    {
+        if (self::$profileEnabled !== null) {
+            return self::$profileEnabled;
+        }
+
+        self::$profileEnabled = getenv('JME_FFI_PROFILE') !== false;
+        if (self::$profileEnabled) {
+            register_shutdown_function([self::class, 'writeProfileReport']);
+            if (function_exists('pcntl_async_signals') && function_exists('pcntl_signal')) {
+                pcntl_async_signals(true);
+                pcntl_signal(SIGINT, static function (): void {
+                    self::writeProfileReport();
+                    exit(130);
+                });
+                pcntl_signal(SIGTERM, static function (): void {
+                    self::writeProfileReport();
+                    exit(143);
+                });
+            }
+        }
+
+        return self::$profileEnabled;
+    }
+
+    private static function recordProfile(string $name, int $elapsedNs): void
+    {
+        self::$profile[$name] ??= ['calls' => 0, 'ns' => 0];
+        self::$profile[$name]['calls']++;
+        self::$profile[$name]['ns'] += $elapsedNs;
+    }
+
+    public static function writeProfileReport(): void
+    {
+        if (self::$profileWritten) {
+            return;
+        }
+        self::$profileWritten = true;
+
+        if (self::$profile === []) {
+            return;
+        }
+
+        uasort(self::$profile, static fn (array $a, array $b): int => $b['ns'] <=> $a['ns']);
+        fwrite(STDERR, "[jme-ffi-profile] method,calls,total_s,per_call_s\n");
+        foreach (self::$profile as $name => $row) {
+            $calls = max(1, $row['calls']);
+            $total = $row['ns'] / 1_000_000_000;
+            fwrite(
+                STDERR,
+                sprintf("[jme-ffi-profile] %s,%d,%.9f,%.12f\n", $name, $row['calls'], $total, $total / $calls)
+            );
+            if (isset(self::$profileUniqueInputs[$name])) {
+                fwrite(STDERR, sprintf("[jme-ffi-profile-unique] %s,%d\n", $name, count(self::$profileUniqueInputs[$name])));
+            }
+        }
     }
 }

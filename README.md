@@ -2,7 +2,7 @@
 
 PHP 8.3+ FFI wrapper for the independent JPL Moshier Ephemeris C library.
 
-This package wraps the project-owned `jme_*` C API from the JPL Moshier Ephemeris native library. It is not a Swiss Ephemeris wrapper and should not treat `swe_*` names or `SE_*` constants as the primary API contract.
+This package wraps the project-owned `jme_*` C API from the JPL Moshier Ephemeris native library.
 
 ## Contract
 
@@ -13,8 +13,6 @@ This package wraps the project-owned `jme_*` C API from the JPL Moshier Ephemeri
 - Native backend: `libjme.so`, `libjme.dylib`, or `jme.dll`
 - No hidden rounding, output reshaping, or dropped status/error buffers
 - Incomplete native behavior should return `JME_ERR` from the C library rather than pretending to provide production ephemeris output
-
-Swiss Ephemeris names may only belong in a separate migration adapter if one is deliberately added. The main wrapper, examples, and tests should use JME naming.
 
 ## Engine Selection
 

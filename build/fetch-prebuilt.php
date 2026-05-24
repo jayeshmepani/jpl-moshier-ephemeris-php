@@ -1,7 +1,16 @@
 <?php
 
 $root = dirname(__DIR__);
-$nativeRoot = getenv('JME_SOURCE_PATH') ?: $root . '/../../jpl-ephemeris-';
+$nativeRoot = getenv('JME_SOURCE_PATH') ?: null;
+if ($nativeRoot === null || $nativeRoot === '') {
+    foreach ([$root . '/../JPL-Moshier-Ephemeris', $root . '/../jpl-ephemeris'] as $candidate) {
+        if (is_dir($candidate)) {
+            $nativeRoot = $candidate;
+            break;
+        }
+    }
+    $nativeRoot ??= $root . '/../jpl-ephemeris';
+}
 $family = PHP_OS_FAMILY;
 $arch = strtolower(php_uname('m'));
 
@@ -87,6 +96,17 @@ if (str_ends_with($tmpFile, '.zip')) {
 
 if (!file_exists($outFile)) {
     fwrite(STDERR, "Downloaded archive did not contain expected file: {$outFile}\n");
+    exit(1);
+}
+
+$calcephFiles = match ($family) {
+    'Windows' => glob($outDir . '/calceph.dll') ?: [],
+    'Darwin' => glob($outDir . '/libcalceph*.dylib') ?: [],
+    default => glob($outDir . '/libcalceph.so*') ?: [],
+};
+
+if ($calcephFiles === []) {
+    fwrite(STDERR, "Downloaded archive did not contain the CALCEPH runtime library.\n");
     exit(1);
 }
 

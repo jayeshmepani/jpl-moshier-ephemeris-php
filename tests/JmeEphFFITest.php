@@ -52,13 +52,22 @@ final class JmeEphFFITest extends TestCase
 
     public function testWrapperCoversNativeFunctionAndConstantInventory(): void
     {
-        $nativeRoot = getenv('JME_SOURCE_PATH') ?: '/home/shreesoftech/projects/test1/astro_packages/jpl-ephemeris-';
+        $nativeRoot = getenv('JME_SOURCE_PATH') ?: null;
+        if ($nativeRoot === null || $nativeRoot === '') {
+            foreach ([dirname(__DIR__, 2) . '/JPL-Moshier-Ephemeris', dirname(__DIR__, 2) . '/jpl-ephemeris'] as $candidate) {
+                if (is_dir($candidate)) {
+                    $nativeRoot = $candidate;
+                    break;
+                }
+            }
+            $nativeRoot ??= dirname(__DIR__, 2) . '/jpl-ephemeris';
+        }
 
-        if (! is_file($nativeRoot . '/docs/API_TRACKING.md')) {
+        if (! is_file($nativeRoot . '/docs/API_REFERENCE.md')) {
             $this->markTestSkipped('Native JME source tree is not available for inventory comparison.');
         }
 
-        $apiTracking = file_get_contents($nativeRoot . '/docs/API_TRACKING.md');
+        $apiTracking = file_get_contents($nativeRoot . '/docs/API_REFERENCE.md');
         preg_match_all('/\|\s*\d+\s*\|\s*`(jme_[A-Za-z0-9_]+)`\s*\|/', $apiTracking, $nativeFunctionMatches);
         $nativeFunctions = array_values(array_unique($nativeFunctionMatches[1]));
 

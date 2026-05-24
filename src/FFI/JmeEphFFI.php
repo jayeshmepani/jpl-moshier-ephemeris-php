@@ -13,7 +13,9 @@ use RuntimeException;
  * @method float jme_julian_day(int $year, int $month, int $day, float $hour, int $calendar)
  * @method void jme_set_sidereal_mode(int $sidereal_mode, float $t0, float $ayan_t0)
  * @method void jme_set_ephemeris_path(string $path)
+ * @method void jme_set_jpl_file(string $path)
  * @method void jme_set_astro_models(string $models, int $flags)
+ * @method int jme_jpl_open(?string $path, \FFI\CData $error)
  * @method int jme_calc_ut(float $jd_ut, int $body, int $flags, \FFI\CData $results, \FFI\CData $error)
  * @method int jme_houses(float $jd_ut, float $geo_lat, float $geo_lon, int $house_system, \FFI\CData $cusps, \FFI\CData $ascmc)
  * @method float jme_get_ayanamsa_ut(float $jd_ut)
@@ -28,16 +30,6 @@ use RuntimeException;
  */
 class JmeEphFFI
 {
-    /** @var array<string, array{calls: int, ns: int}> */
-    private static array $profile = [];
-
-    /** @var array<string, array<string, true>> */
-    private static array $profileUniqueInputs = [];
-
-    private static ?bool $profileEnabled = null;
-
-    private static bool $profileWritten = false;
-
     public const JME_JME_H = 1;
     public const JME_VERSION = '0.1.0';
     public const JME_AU_KM = 149597870.7;
@@ -500,6 +492,15 @@ class JmeEphFFI
     public const JME_MODEL_REVISED_PREC_LASKAR = 403;
     public const JME_MODEL_REVISED_PREC_VONDRAK = 404;
     public const JME_MODEL_REVISED_PREC_LIESKE = 405;
+    /** @var array<string, array{calls: int, ns: int}> */
+    private static array $profile = [];
+
+    /** @var array<string, array<string, true>> */
+    private static array $profileUniqueInputs = [];
+
+    private static ?bool $profileEnabled = null;
+
+    private static bool $profileWritten = false;
 
     private FFI $ffi;
 
@@ -720,6 +721,7 @@ CDEF;
             throw new RuntimeException('JME shared library not found at: ' . $libraryPath);
         }
 
+        self::prepareLibraryDirectory($libraryPath);
         $this->ffi = FFI::cdef($cdef, $libraryPath);
     }
 
@@ -752,9 +754,19 @@ CDEF;
         $this->profileVoidCall('jme_set_ephemeris_path', fn (): mixed => $this->ffi->jme_set_ephemeris_path($path));
     }
 
+    public function jme_set_jpl_file(string $path): void
+    {
+        $this->profileVoidCall('jme_set_jpl_file', fn (): mixed => $this->ffi->jme_set_jpl_file($path));
+    }
+
     public function jme_set_astro_models(string $models, int $flags): void
     {
         $this->profileVoidCall('jme_set_astro_models', fn (): mixed => $this->ffi->jme_set_astro_models($models, $flags));
+    }
+
+    public function jme_jpl_open(?string $path, CData $error): int
+    {
+        return $this->profileCall('jme_jpl_open', fn (): int => $this->ffi->jme_jpl_open($path, $error));
     }
 
     public function jme_calc_ut(float $jd_ut, int $body, int $flags, CData $results, CData $error): int
@@ -822,6 +834,32 @@ CDEF;
         return $this->ffi;
     }
 
+    public static function writeProfileReport(): void
+    {
+        if (self::$profileWritten) {
+            return;
+        }
+        self::$profileWritten = true;
+
+        if (self::$profile === []) {
+            return;
+        }
+
+        uasort(self::$profile, static fn (array $a, array $b): int => $b['ns'] <=> $a['ns']);
+        fwrite(STDERR, "[jme-ffi-profile] method,calls,total_s,per_call_s\n");
+        foreach (self::$profile as $name => $row) {
+            $calls = max(1, $row['calls']);
+            $total = $row['ns'] / 1_000_000_000;
+            fwrite(
+                STDERR,
+                sprintf("[jme-ffi-profile] %s,%d,%.9f,%.12f\n", $name, $row['calls'], $total, $total / $calls)
+            );
+            if (isset(self::$profileUniqueInputs[$name])) {
+                fwrite(STDERR, sprintf("[jme-ffi-profile-unique] %s,%d\n", $name, count(self::$profileUniqueInputs[$name])));
+            }
+        }
+    }
+
     private static function defaultLibraryPath(): string
     {
         $family = PHP_OS_FAMILY;
@@ -847,9 +885,33 @@ CDEF;
         return dirname(__DIR__, 2) . '/libs/' . $dir . '/' . $file;
     }
 
+    private static function prepareLibraryDirectory(string $libraryPath): void
+    {
+        if (PHP_OS_FAMILY !== 'Windows') {
+            return;
+        }
+
+        $directory = dirname($libraryPath);
+        $currentPath = getenv('PATH');
+        $segments = $currentPath === false ? [] : array_filter(explode(PATH_SEPARATOR, $currentPath), static fn (string $segment): bool => $segment !== '');
+
+        foreach ($segments as $segment) {
+            if (strcasecmp(rtrim($segment, '\\/'), rtrim($directory, '\\/')) === 0) {
+                return;
+            }
+        }
+
+        $updatedPath = $directory . PATH_SEPARATOR . ($currentPath === false ? '' : $currentPath);
+        putenv('PATH=' . $updatedPath);
+        $_ENV['PATH'] = $updatedPath;
+        $_SERVER['PATH'] = $updatedPath;
+    }
+
     /**
      * @template T
+     *
      * @param callable(): T $call
+     *
      * @return T
      */
     private function profileCall(string $name, callable $call): mixed
@@ -912,31 +974,5 @@ CDEF;
         self::$profile[$name] ??= ['calls' => 0, 'ns' => 0];
         self::$profile[$name]['calls']++;
         self::$profile[$name]['ns'] += $elapsedNs;
-    }
-
-    public static function writeProfileReport(): void
-    {
-        if (self::$profileWritten) {
-            return;
-        }
-        self::$profileWritten = true;
-
-        if (self::$profile === []) {
-            return;
-        }
-
-        uasort(self::$profile, static fn (array $a, array $b): int => $b['ns'] <=> $a['ns']);
-        fwrite(STDERR, "[jme-ffi-profile] method,calls,total_s,per_call_s\n");
-        foreach (self::$profile as $name => $row) {
-            $calls = max(1, $row['calls']);
-            $total = $row['ns'] / 1_000_000_000;
-            fwrite(
-                STDERR,
-                sprintf("[jme-ffi-profile] %s,%d,%.9f,%.12f\n", $name, $row['calls'], $total, $total / $calls)
-            );
-            if (isset(self::$profileUniqueInputs[$name])) {
-                fwrite(STDERR, sprintf("[jme-ffi-profile-unique] %s,%d\n", $name, count(self::$profileUniqueInputs[$name])));
-            }
-        }
     }
 }

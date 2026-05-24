@@ -9,7 +9,7 @@ return [
     |--------------------------------------------------------------------------
     | Path to the compiled libjme.so / libjme.dylib / jme.dll file.
     */
-    'library_path' => env('JME_LIBRARY_PATH', dirname(__DIR__) . '/libs/linux-x64/libjme.so'),
+    'library_path' => env('JME_LIBRARY_PATH'),
 
     /*
     |--------------------------------------------------------------------------

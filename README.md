@@ -2,7 +2,7 @@
 
 PHP 8.3+ FFI wrapper for the independent JPL Moshier Ephemeris C library.
 
-This package wraps the project-owned `jme_*` C API from `/home/shreesoftech/projects/test1/astro_packages/jpl-ephemeris-`. It is not a Swiss Ephemeris wrapper and should not treat `swe_*` names or `SE_*` constants as the primary API contract.
+This package wraps the project-owned `jme_*` C API from the JPL Moshier Ephemeris native library. It is not a Swiss Ephemeris wrapper and should not treat `swe_*` names or `SE_*` constants as the primary API contract.
 
 ## Contract
 
@@ -38,11 +38,12 @@ Use direct `jme_jpl_*` calls for raw JPL/CALCEPH kernel access. The PHP layer do
 - PHP `^8.3`
 - PHP FFI extension (`ext-ffi`)
 - A compiled JME shared library
+- The matching CALCEPH runtime library when using the JPL/CALCEPH backend
 
 By default, the wrapper loads the bundled platform library from this package, for example:
 
 ```text
-/home/shreesoftech/projects/test1/astro_packages/user-ffi-wrappers/jpl-moshier-ephemeris-php/libs/linux-x64/libjme.so
+vendor/jayeshmepani/jpl-moshier-ephemeris-php/libs/linux-x64/libjme.so
 ```
 
 Override it with:
@@ -50,6 +51,25 @@ Override it with:
 ```bash
 export JME_LIBRARY_PATH=/path/to/libjme.so
 ```
+
+## Runtime Libraries and Kernels
+
+Composer installs prebuilt runtime archives from this repository's GitHub releases when a local library is not already present. Each runtime archive contains:
+
+- JME: `jme.dll`, `libjme.so`, or `libjme.dylib`
+- CALCEPH: the platform runtime library required by JPL kernel mode
+
+JPL `.bsp` kernels are not shipped in this package. Download them separately from the native JME kernel release:
+
+```text
+https://github.com/jayeshmepani/jpl-ephemeris/releases/tag/jpl-kernels
+```
+
+Supported kernel choices:
+
+- `de440s.bsp` - small
+- `de440.bsp` - medium
+- `de441.bsp` - large, published as split release parts because the full file exceeds GitHub's single asset size limit
 
 ## Quick Start
 

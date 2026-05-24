@@ -3,8 +3,17 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$nativeRoot = getenv('JME_SOURCE_PATH') ?: $root . '/../../jpl-ephemeris-';
-$apiTrackingPath = $nativeRoot . '/docs/API_TRACKING.md';
+$nativeRoot = getenv('JME_SOURCE_PATH') ?: null;
+if ($nativeRoot === null || $nativeRoot === '') {
+    foreach ([$root . '/../JPL-Moshier-Ephemeris', $root . '/../jpl-ephemeris'] as $candidate) {
+        if (is_dir($candidate)) {
+            $nativeRoot = $candidate;
+            break;
+        }
+    }
+    $nativeRoot ??= $root . '/../jpl-ephemeris';
+}
+$apiTrackingPath = $nativeRoot . '/docs/API_REFERENCE.md';
 $headerPaths = [
     $nativeRoot . '/include/jme/jme.h',
     $nativeRoot . '/include/jme/jme_extended.h',

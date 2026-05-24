@@ -3,9 +3,18 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$nativeRoot = getenv('JME_SOURCE_PATH') ?: $root . '/../../jpl-ephemeris-';
+$nativeRoot = getenv('JME_SOURCE_PATH') ?: null;
+if ($nativeRoot === null || $nativeRoot === '') {
+    foreach ([$root . '/../JPL-Moshier-Ephemeris', $root . '/../jpl-ephemeris'] as $candidate) {
+        if (is_dir($candidate)) {
+            $nativeRoot = $candidate;
+            break;
+        }
+    }
+    $nativeRoot ??= $root . '/../jpl-ephemeris';
+}
 $wrapperPath = $root . '/src/FFI/JmeEphFFI.php';
-$apiTrackingPath = $nativeRoot . '/docs/API_TRACKING.md';
+$apiTrackingPath = $nativeRoot . '/docs/API_REFERENCE.md';
 $headerPaths = [
     $nativeRoot . '/include/jme/jme.h',
     $nativeRoot . '/include/jme/jme_extended.h',
@@ -25,7 +34,7 @@ $headerText = implode("\n", array_map('file_get_contents', $headerPaths));
 preg_match_all('/\|\s*\d+\s*\|\s*`(jme_[A-Za-z0-9_]+)`\s*\|/', $apiTracking, $trackedFunctionMatches);
 $trackedFunctions = array_values(array_unique($trackedFunctionMatches[1]));
 
-preg_match('/\$cdef = <<<' . "'CDEF'" . "\n(.*?)\nCDEF;/s", $wrapperText, $cdefMatch);
+preg_match('/\$cdef = <<<' . "'CDEF'" . '\R(.*?)\RCDEF;/s', $wrapperText, $cdefMatch);
 if (! isset($cdefMatch[1])) {
     fwrite(STDERR, "Could not locate cdef block in wrapper.\n");
     exit(1);
@@ -117,35 +126,133 @@ $probeCode[] = '}';
 $tmpDir = sys_get_temp_dir() . '/jme_php_verify_' . getmypid();
 @mkdir($tmpDir, 0775, true);
 $probeC = $tmpDir . '/constants_probe.c';
-$probeBin = $tmpDir . '/constants_probe';
+$probeBin = $tmpDir . '/constants_probe' . (PHP_OS_FAMILY === 'Windows' ? '.exe' : '');
 file_put_contents($probeC, implode("\n", $probeCode) . "\n");
 
-$compileCommand = sprintf(
-    'cc -I%s %s -o %s 2>&1',
-    escapeshellarg($nativeRoot . '/include'),
-    escapeshellarg($probeC),
-    escapeshellarg($probeBin)
-);
-$compileOutput = [];
-$compileExit = 0;
-exec($compileCommand, $compileOutput, $compileExit);
-if ($compileExit !== 0) {
-    fwrite(STDERR, "Failed to compile constant probe:\n" . implode("\n", $compileOutput) . "\n");
-    exit(1);
+$compileCommand = null;
+if (PHP_OS_FAMILY === 'Windows') {
+    $cc = getenv('CC') ?: null;
+    if (is_string($cc) && $cc !== '') {
+        $compileCommand = sprintf(
+            '"%s" /nologo /I"%s" "%s" /Fe:"%s" 2>&1',
+            $cc,
+            $nativeRoot . '/include',
+            $probeC,
+            $probeBin
+        );
+    } elseif ((getenv('INCLUDE') ?: '') !== '') {
+        $compileCommand = sprintf(
+            'cl /nologo /I"%s" "%s" /Fe:"%s" 2>&1',
+            $nativeRoot . '/include',
+            $probeC,
+            $probeBin
+        );
+    }
+} else {
+    $compileCommand = sprintf(
+        'cc -I%s %s -o %s 2>&1',
+        escapeshellarg($nativeRoot . '/include'),
+        escapeshellarg($probeC),
+        escapeshellarg($probeBin)
+    );
 }
 
-$probeOutput = [];
-$probeExit = 0;
-exec(escapeshellarg($probeBin), $probeOutput, $probeExit);
-if ($probeExit !== 0) {
-    fwrite(STDERR, "Constant probe execution failed.\n");
-    exit(1);
+$compileOutput = [];
+$compileExit = 1;
+if ($compileCommand !== null) {
+    exec($compileCommand, $compileOutput, $compileExit);
 }
 
 $cValues = [];
-foreach ($probeOutput as $line) {
-    [$name, $type, $value, $aux] = array_pad(explode("\t", $line), 4, '');
-    $cValues[$name] = ['type' => $type, 'value' => $value, 'aux' => $aux];
+if ($compileExit === 0) {
+    $probeOutput = [];
+    $probeExit = 0;
+    exec(escapeshellarg($probeBin), $probeOutput, $probeExit);
+    if ($probeExit !== 0) {
+        fwrite(STDERR, "Constant probe execution failed.\n");
+        exit(1);
+    }
+
+    foreach ($probeOutput as $line) {
+        [$name, $type, $value, $aux] = array_pad(explode("\t", $line), 4, '');
+        $cValues[$name] = ['type' => $type, 'value' => $value, 'aux' => $aux];
+    }
+} else {
+    $constantValues = [];
+    $evaluate = static function (string $expression) use (&$constantValues) {
+        $expression = trim($expression);
+        if ($expression === '') {
+            return 1;
+        }
+        if (preg_match('/^"(.*)"$/s', $expression, $match)) {
+            return stripcslashes($match[1]);
+        }
+
+        $resolved = preg_replace_callback(
+            '/\bJME_[A-Z0-9_]+\b/',
+            static function (array $match) use (&$constantValues) {
+                $name = $match[0];
+                if (! array_key_exists($name, $constantValues)) {
+                    throw new RuntimeException("Unknown constant reference: {$name}");
+                }
+
+                return is_string($constantValues[$name]) ? var_export($constantValues[$name], true) : (string) $constantValues[$name];
+            },
+            $expression
+        );
+
+        if (! preg_match('~^[0-9A-Za-z_+\-*/%<>&|(). "\']+$~', $resolved)) {
+            throw new RuntimeException("Unsafe expression: {$expression}");
+        }
+
+        return eval('return ' . $resolved . ';');
+    };
+
+    foreach ($headerPaths as $headerPath) {
+        $header = file_get_contents($headerPath);
+        if (preg_match_all('/^\s*#define\s+(JME_[A-Z0-9_]+)(?:[ \t]+([^\r\n]+))?\s*$/m', $header, $defineMatches, PREG_SET_ORDER)) {
+            foreach ($defineMatches as $define) {
+                $constantValues[$define[1]] = $evaluate(isset($define[2]) ? trim($define[2]) : '');
+            }
+        }
+
+        if (preg_match_all('/typedef\s+enum\s+[^{]*\{(.*?)\}\s*[A-Za-z0-9_]+\s*;/s', $header, $enumMatches, PREG_SET_ORDER)) {
+            foreach ($enumMatches as $enumMatch) {
+                $nextValue = null;
+                foreach (explode(',', $enumMatch[1]) as $entry) {
+                    $entry = trim(preg_replace('!/\*.*?\*/!s', '', $entry));
+                    if ($entry === '' || ! preg_match('/^(JME_[A-Z0-9_]+)\s*(?:=\s*(.+))?$/s', $entry, $enumEntryMatch)) {
+                        continue;
+                    }
+
+                    if (isset($enumEntryMatch[2]) && trim($enumEntryMatch[2]) !== '') {
+                        $nextValue = $evaluate(trim($enumEntryMatch[2]));
+                    } elseif ($nextValue === null) {
+                        $nextValue = 0;
+                    } else {
+                        $nextValue++;
+                    }
+
+                    $constantValues[$enumEntryMatch[1]] = $nextValue;
+                }
+            }
+        }
+    }
+
+    foreach ($trackedConstants as $name) {
+        if (! array_key_exists($name, $constantValues)) {
+            continue;
+        }
+
+        $value = $constantValues[$name];
+        if (is_string($value)) {
+            $cValues[$name] = ['type' => 'string', 'value' => $value, 'aux' => ''];
+        } elseif (is_float($value)) {
+            $cValues[$name] = ['type' => 'double', 'value' => sprintf('%.17g', $value), 'aux' => ''];
+        } else {
+            $cValues[$name] = ['type' => 'int', 'value' => (string) (int) $value, 'aux' => ''];
+        }
+    }
 }
 
 $constantErrors = [];

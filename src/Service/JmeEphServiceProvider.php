@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace JmeEph\Service;
 
+use FFI;
 use Illuminate\Support\ServiceProvider;
 use JmeEph\FFI\JmeEphFFI;
 use Override;
+use RuntimeException;
 
 /**
  * Laravel Service Provider for JPL Moshier Ephemeris FFI.
@@ -44,7 +46,24 @@ final class JmeEphServiceProvider extends ServiceProvider
 
         $this->app->singleton('jmeeph', function ($app) {
             $libraryPath = $app->make('config')->get('jmeeph.library_path');
-            return new JmeEphFFI($libraryPath);
+            $ffi = new JmeEphFFI($libraryPath);
+            $ephemerisPath = $app->make('config')->get('jmeeph.ephemeris_path');
+            $engine = strtoupper((string) $app->make('config')->get('jmeeph.engine', $app->make('config')->get('jmeeph.calculation_path', 'AUTO')));
+
+            if (is_string($ephemerisPath) && $ephemerisPath !== '' && file_exists($ephemerisPath)) {
+                $ffi->jme_set_ephemeris_path($ephemerisPath);
+            }
+
+            if (is_string($ephemerisPath) && $ephemerisPath !== '' && is_file($ephemerisPath)) {
+                $ffi->jme_set_jpl_file($ephemerisPath);
+                $error = $ffi->getFFI()->new('char[256]');
+                $openResult = $ffi->jme_jpl_open($ephemerisPath, $error);
+                if ($openResult !== JmeEphFFI::JME_OK && $engine === 'JPL') {
+                    throw new RuntimeException('jme_jpl_open failed: ' . FFI::string($error));
+                }
+            }
+
+            return $ffi;
         });
 
         $this->app->singleton(JmeService::class, fn ($app) => new JmeService(

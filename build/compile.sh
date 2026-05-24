@@ -3,7 +3,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-NATIVE_ROOT="${JME_SOURCE_PATH:-$ROOT_DIR/../../jpl-ephemeris-}"
+if [[ -n "${JME_SOURCE_PATH:-}" ]]; then
+    NATIVE_ROOT="$JME_SOURCE_PATH"
+elif [[ -d "$ROOT_DIR/../JPL-Moshier-Ephemeris" ]]; then
+    NATIVE_ROOT="$ROOT_DIR/../JPL-Moshier-Ephemeris"
+else
+    NATIVE_ROOT="$ROOT_DIR/../jpl-ephemeris"
+fi
 
 if [[ ! -f "$NATIVE_ROOT/CMakeLists.txt" ]]; then
     echo "Native JME source tree not found: $NATIVE_ROOT" >&2

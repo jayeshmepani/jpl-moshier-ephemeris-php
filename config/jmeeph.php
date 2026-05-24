@@ -22,13 +22,8 @@ return [
     | 'JPL'            -> Require JPL kernel-backed behavior.
     | 'MOSHIER'        -> Force Moshier analytical behavior.
     | 'VSOP_ELP_MEEUS' -> Force VSOP87/ELP2000/Meeus analytical behavior.
-    | 'ANALYTICAL'     -> Native analytical engine mode.
-    |
-    | Backward-compatible aliases accepted by JmeService:
-    | 'native' -> AUTO
-    | 'vsop87' -> VSOP_ELP_MEEUS
     */
-    'engine' => env('JME_ENGINE', env('JME_CALCULATION_PATH', 'AUTO')),
+    'engine' => env('JME_ENGINE', 'AUTO'),
 
     /*
     |--------------------------------------------------------------------------

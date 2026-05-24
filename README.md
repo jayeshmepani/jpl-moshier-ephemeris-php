@@ -22,12 +22,6 @@ The low-level `JmeEphFFI` class exposes every native function directly. The opti
 - `JPL`: require JPL kernel-backed behavior
 - `MOSHIER`: force Moshier analytical behavior
 - `VSOP_ELP_MEEUS`: force VSOP87/ELP2000/Meeus analytical behavior
-- `ANALYTICAL`: use the native analytical engine mode
-
-Backward-compatible aliases accepted by `JmeService`:
-
-- `native` -> `AUTO`
-- `vsop87` -> `VSOP_ELP_MEEUS`
 
 Use direct `jme_jpl_*` calls for raw JPL/CALCEPH kernel access. The PHP layer does not normalize or reinterpret native outputs.
 

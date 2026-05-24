@@ -26,11 +26,10 @@ class JmeService
     private function normalizeEngine(string $engine): string
     {
         return match (strtoupper($engine)) {
-            'AUTO', 'NATIVE' => 'AUTO',
+            'AUTO' => 'AUTO',
             'JPL' => 'JPL',
             'MOSHIER' => 'MOSHIER',
-            'VSOP_ELP_MEEUS', 'VSOP87', 'VSOP+ELP+MEEUS' => 'VSOP_ELP_MEEUS',
-            'ANALYTICAL' => 'ANALYTICAL',
+            'VSOP_ELP_MEEUS' => 'VSOP_ELP_MEEUS',
             default => $engine,
         };
     }

@@ -1,5 +1,10 @@
 # JPL Moshier Ephemeris PHP FFI
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/jayeshmepani/jpl-moshier-ephemeris-php.svg?style=flat-square)](https://packagist.org/packages/jayeshmepani/jpl-moshier-ephemeris-php)
+[![Total Downloads](https://img.shields.io/packagist/dt/jayeshmepani/jpl-moshier-ephemeris-php.svg?style=flat-square)](https://packagist.org/packages/jayeshmepani/jpl-moshier-ephemeris-php)
+[![PHP Version Require](https://img.shields.io/packagist/php-v/jayeshmepani/jpl-moshier-ephemeris-php?style=flat-square)](https://packagist.org/packages/jayeshmepani/jpl-moshier-ephemeris-php)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+
 PHP 8.3+ FFI wrapper for the independent JPL Moshier Ephemeris C library.
 
 This package wraps the project-owned `jme_*` C API from the JPL Moshier Ephemeris native library.

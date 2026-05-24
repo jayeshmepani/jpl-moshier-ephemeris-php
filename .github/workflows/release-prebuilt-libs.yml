@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-latest
+          - runner: ubuntu-24.04
             triplet: x64-linux-dynamic
             asset: jme-linux-x64.tar.gz
             stage: linux-x64
@@ -34,15 +34,15 @@ jobs:
             triplet: arm64-linux-dynamic
             asset: jme-linux-arm64.tar.gz
             stage: linux-arm64
-          - runner: macos-13
+          - runner: macos-15-intel
             triplet: x64-osx-dynamic
             asset: jme-macos-x64.tar.gz
             stage: macos-x64
-          - runner: macos-latest
+          - runner: macos-14
             triplet: arm64-osx-dynamic
             asset: jme-macos-arm64.tar.gz
             stage: macos-arm64
-          - runner: windows-latest
+          - runner: windows-2022
             triplet: x64-windows
             asset: jme-windows-x64.zip
             stage: windows-x64

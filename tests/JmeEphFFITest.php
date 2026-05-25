@@ -437,6 +437,24 @@ final class JmeEphFFITest extends TestCase
         $this->assertIsFloat($xx[0]);
     }
 
+    public function testConfigureEngineRejectsJplWithoutUsableKernel(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('ENGINE=JPL');
+
+        $this->jme->configureEngine('JPL', sys_get_temp_dir() . '/jme-missing-kernels');
+    }
+
+    public function testConvenienceServiceJplRejectsMissingKernelEarly(): void
+    {
+        $service = new JmeService($this->jme, 'JPL', sys_get_temp_dir() . '/jme-missing-kernels');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('ENGINE=JPL');
+
+        $service->calc(2451545.0, JmeEphFFI::JME_BODY_SUN, JmeEphFFI::JME_CALC_NONE);
+    }
+
     public function testSiderealModeAndAyanamsa(): void
     {
         $this->jme->jme_set_sidereal_mode(JmeEphFFI::JME_SIDEREAL_LAHIRI, 0.0, 0.0);

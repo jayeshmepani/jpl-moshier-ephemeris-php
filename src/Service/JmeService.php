@@ -10,7 +10,7 @@ class JmeService
 {
     private readonly string $engine;
 
-    public function __construct(private readonly JmeEphFFI $ffi, string $engine = 'AUTO')
+    public function __construct(private readonly JmeEphFFI $ffi, string $engine = 'AUTO', private readonly ?string $ephemerisPath = null)
     {
         $this->engine = $this->normalizeEngine($engine);
     }
@@ -19,7 +19,7 @@ class JmeService
     {
         $results ??= $this->ffi->getFFI()->new('double[6]');
         $error ??= $this->ffi->getFFI()->new('char[256]');
-        $this->ffi->getFFI()->jme_set_astro_models('ENGINE=' . $this->engine, 0);
+        $this->ffi->configureEngine($this->engine, $this->ephemerisPath);
         return $this->ffi->getFFI()->jme_calc($jd_et, $body, $flags, $results, $error);
     }
 

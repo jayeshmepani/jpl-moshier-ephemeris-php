@@ -16,6 +16,8 @@ use RuntimeException;
  * @method void jme_set_jpl_file(string $path)
  * @method void jme_set_astro_models(string $models, int $flags)
  * @method int jme_jpl_open(?string $path, \FFI\CData $error)
+ * @method ?\FFI\CData jme_ephemeris_path()
+ * @method ?\FFI\CData jme_jpl_file()
  * @method int jme_calc_ut(float $jd_ut, int $body, int $flags, \FFI\CData $results, \FFI\CData $error)
  * @method int jme_houses(float $jd_ut, float $geo_lat, float $geo_lon, int $house_system, \FFI\CData $cusps, \FFI\CData $ascmc)
  * @method float jme_get_ayanamsa_ut(float $jd_ut)
@@ -764,6 +766,32 @@ CDEF;
         $this->profileVoidCall('jme_set_astro_models', fn (): mixed => $this->ffi->jme_set_astro_models($models, $flags));
     }
 
+    public function configureEngine(string $engine, ?string $ephemerisPath = null, ?string $jplFile = null): void
+    {
+        $engine = $this->normalizeEngine($engine);
+
+        if (is_string($ephemerisPath) && $ephemerisPath !== '') {
+            $this->jme_set_ephemeris_path($ephemerisPath);
+        }
+
+        if (is_string($jplFile) && $jplFile !== '') {
+            $this->jme_set_jpl_file($jplFile);
+        }
+
+        if ($engine === 'JPL') {
+            $kernelPath = $this->resolveUsableJplKernelPath($ephemerisPath, $jplFile);
+            $error = $this->ffi->new('char[256]');
+
+            $this->jme_set_jpl_file($kernelPath);
+            $openResult = $this->jme_jpl_open($kernelPath, $error);
+            if ($openResult !== self::JME_OK) {
+                throw new RuntimeException('ENGINE=JPL is configured but unusable: ' . FFI::string($error));
+            }
+        }
+
+        $this->jme_set_astro_models('ENGINE=' . $engine, 0);
+    }
+
     public function jme_jpl_open(?string $path, CData $error): int
     {
         return $this->profileCall('jme_jpl_open', fn (): int => $this->ffi->jme_jpl_open($path, $error));
@@ -832,6 +860,28 @@ CDEF;
     public function getFFI(): FFI
     {
         return $this->ffi;
+    }
+
+    public function jme_ephemeris_path(): string
+    {
+        $path = $this->ffi->jme_ephemeris_path();
+
+        if ($path === null) {
+            return '';
+        }
+
+        return is_string($path) ? $path : FFI::string($path);
+    }
+
+    public function jme_jpl_file(): string
+    {
+        $path = $this->ffi->jme_jpl_file();
+
+        if ($path === null) {
+            return '';
+        }
+
+        return is_string($path) ? $path : FFI::string($path);
     }
 
     public static function writeProfileReport(): void
@@ -905,6 +955,50 @@ CDEF;
         putenv('PATH=' . $updatedPath);
         $_ENV['PATH'] = $updatedPath;
         $_SERVER['PATH'] = $updatedPath;
+    }
+
+    private function normalizeEngine(string $engine): string
+    {
+        return match (strtoupper($engine)) {
+            'AUTO' => 'AUTO',
+            'JPL' => 'JPL',
+            'MOSHIER' => 'MOSHIER',
+            'VSOP_ELP_MEEUS', 'ANALYTICAL' => 'VSOP_ELP_MEEUS',
+            default => strtoupper($engine),
+        };
+    }
+
+    private function resolveUsableJplKernelPath(?string $ephemerisPath, ?string $jplFile): string
+    {
+        $candidates = [];
+
+        foreach ([$jplFile, $ephemerisPath, $this->jme_jpl_file(), $this->jme_ephemeris_path()] as $candidate) {
+            if (is_string($candidate) && $candidate !== '') {
+                $candidates[] = $candidate;
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+
+            if (is_dir($candidate)) {
+                $matches = array_merge(
+                    glob(rtrim($candidate, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '*.bsp') ?: [],
+                    glob(rtrim($candidate, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '*.BSP') ?: []
+                );
+                sort($matches, SORT_STRING);
+                if ($matches !== []) {
+                    return $matches[0];
+                }
+            }
+        }
+
+        throw new RuntimeException(
+            'ENGINE=JPL requires a readable .bsp kernel file, but no usable kernel was found in the configured JPL file or ephemeris path. '
+            . 'Download kernels from: https://github.com/jayeshmepani/jpl-ephemeris/releases/tag/jpl-kernels'
+        );
     }
 
     /**

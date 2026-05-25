@@ -5,13 +5,19 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $nativeRoot = getenv('JME_SOURCE_PATH') ?: null;
 if ($nativeRoot === null || $nativeRoot === '') {
-    foreach ([$root . '/../JPL-Moshier-Ephemeris', $root . '/../jpl-ephemeris'] as $candidate) {
+    foreach ([
+        $root . '/../JPL-Moshier-Ephemeris',
+        $root . '/../jpl-ephemeris-',
+        $root . '/../jpl-ephemeris',
+        $root . '/../../jpl-ephemeris-',
+        $root . '/../../jpl-ephemeris',
+    ] as $candidate) {
         if (is_dir($candidate)) {
             $nativeRoot = $candidate;
             break;
         }
     }
-    $nativeRoot ??= $root . '/../jpl-ephemeris';
+    $nativeRoot ??= $root . '/../../jpl-ephemeris-';
 }
 $wrapperPath = $root . '/src/FFI/JmeEphFFI.php';
 $apiTrackingPath = $nativeRoot . '/docs/API_REFERENCE.md';

@@ -29,6 +29,9 @@ return [
     |--------------------------------------------------------------------------
     | Ephemeris Path (for JPL Kernels)
     |--------------------------------------------------------------------------
+    | Set this to a `.bsp` file or a directory containing `.bsp` kernels.
+    | Kernel download release:
+    | https://github.com/jayeshmepani/jpl-ephemeris/releases/tag/jpl-kernels
     */
     'ephemeris_path' => env('JME_EPHEMERIS_PATH', storage_path('app/ephemeris')),
 ];

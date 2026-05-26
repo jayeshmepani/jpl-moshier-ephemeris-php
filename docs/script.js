@@ -255,10 +255,88 @@ function handleResponsiveTables() {
     });
 }
 
+function initInstallTabs() {
+    document.querySelectorAll("[data-tabs]").forEach(group => {
+        const buttons = group.querySelectorAll(".tab-button");
+        const panels = group.querySelectorAll(".tab-panel");
+
+        buttons.forEach(button => {
+            button.addEventListener("click", () => {
+                const targetId = button.getAttribute("aria-controls");
+
+                buttons.forEach(btn => {
+                    const active = btn === button;
+                    btn.classList.toggle("active", active);
+                    btn.setAttribute("aria-selected", String(active));
+                    btn.tabIndex = active ? 0 : -1;
+                });
+
+                panels.forEach(panel => {
+                    const active = panel.id === targetId;
+                    panel.classList.toggle("active", active);
+                    panel.hidden = !active;
+                });
+            });
+        });
+    });
+}
+
+function initPageToc() {
+    const tocNav = document.getElementById("pageTocNav");
+    if (!tocNav) return;
+
+    const sections = document.querySelectorAll(".content-section[id]");
+    const fragment = document.createDocumentFragment();
+
+    sections.forEach(section => {
+        const heading = section.querySelector("h2, h1");
+        if (!heading) return;
+
+        const link = document.createElement("a");
+        link.href = `#${section.id}`;
+        link.className = "page-toc-link";
+        link.textContent = section.dataset.tocTitle || heading.textContent.trim();
+        fragment.appendChild(link);
+    });
+
+    tocNav.appendChild(fragment);
+
+    const links = tocNav.querySelectorAll(".page-toc-link");
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            links.forEach(link => {
+                link.classList.toggle("active", link.getAttribute("href") === `#${entry.target.id}`);
+            });
+        });
+    }, { rootMargin: "-20% 0px -70% 0px", threshold: 0 });
+
+    sections.forEach(section => observer.observe(section));
+}
+
+function initScrollProgress() {
+    const bar = document.querySelector(".scroll-progress");
+    if (!bar) return;
+
+    const update = () => {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
+        bar.style.transform = `scaleX(${Math.min(1, Math.max(0, progress))})`;
+    };
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     initNavigation();
     initCodeBlocks();
     initSidebarSearch();
     handleResponsiveTables();
+    initInstallTabs();
+    initPageToc();
+    initScrollProgress();
 });

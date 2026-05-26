@@ -1,6 +1,6 @@
 # Contributing to JPL Moshier Ephemeris PHP FFI
 
-Thank you for considering contributing to JPL Moshier Ephemeris PHP FFI. This package targets the project-owned `jme_*` API and should not reintroduce Swiss compatibility as the primary contract.
+Thank you for considering contributing to JPL Moshier Ephemeris PHP FFI. This package targets the project-owned `jme_*` API and should not introduce legacy compatibility surfaces as the primary contract.
 
 ## Code of Conduct
 
@@ -140,7 +140,7 @@ Contributions to this repository are accepted under AGPL-3.0 or later, while any
 
 Releases follow [Semantic Versioning](https://semver.org/):
 
-* **MAJOR** version for incompatible changes or Swiss Ephemeris major version updates
+* **MAJOR** version for incompatible public API changes or native library major version updates
 * **MINOR** version for backwards-compatible features
 * **PATCH** version for backwards-compatible bug fixes
 

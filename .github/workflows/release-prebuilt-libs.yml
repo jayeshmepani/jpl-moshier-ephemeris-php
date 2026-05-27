@@ -121,7 +121,7 @@ jobs:
           $calcephRoot = Join-Path $env:VCPKG_ROOT 'installed/${{ matrix.triplet }}'
           $calcephFiles = Get-ChildItem -Path $calcephRoot -Recurse -File |
               Where-Object {
-                  $_.Name -match '^(lib)?calceph(\.dll|\.so(\..*)?|\.dylib)$'
+                  $_.Name -match '^(lib)?calceph(\.dll|\.so(\..*)?|(\..*)?\.dylib)$'
               }
           if (-not $calcephFiles) {
               throw 'CALCEPH runtime library was not found.'

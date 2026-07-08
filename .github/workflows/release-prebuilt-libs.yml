@@ -48,17 +48,11 @@ jobs:
             asset: jme-linux-arm64-ubuntu22.tar.gz
             stage: linux-arm64-ubuntu22
 
-          # ── macOS 15 / Intel (current) ─────────────────────────────────
+          # ── macOS 15 / Intel (only free x64 macOS runner, until Aug 2027) ──
           - runner: macos-15-intel
             triplet: x64-osx-dynamic
             asset: jme-macos-x64-15.tar.gz
             stage: macos-x64-15
-
-          # ── macOS 13 / Intel (older, last x64 macOS runner) ────────────
-          - runner: macos-13
-            triplet: x64-osx-dynamic
-            asset: jme-macos-x64-13.tar.gz
-            stage: macos-x64-13
 
           # ── macOS 15 / Apple Silicon (current) ─────────────────────────
           - runner: macos-15
@@ -72,17 +66,11 @@ jobs:
             asset: jme-macos-arm64-14.tar.gz
             stage: macos-arm64-14
 
-          # ── Windows 2022 (current) ──────────────────────────────────────
+          # ── Windows 2022 ────────────────────────────────────────────────
           - runner: windows-2022
             triplet: x64-windows
             asset: jme-windows-x64-2022.zip
             stage: windows-x64-2022
-
-          # ── Windows 2019 (older) ────────────────────────────────────────
-          - runner: windows-2019
-            triplet: x64-windows
-            asset: jme-windows-x64-2019.zip
-            stage: windows-x64-2019
 
     steps:
       - name: Checkout wrapper
@@ -220,8 +208,7 @@ jobs:
 
           | Asset | Runner | Notes |
           |---|---|---|
-          | `jme-macos-x64-15.tar.gz` | macos-15-intel | macOS 15, x86_64 |
-          | `jme-macos-x64-13.tar.gz` | macos-13 | macOS 13, x86_64 |
+          | `jme-macos-x64-15.tar.gz` | macos-15-intel | macOS 15, x86_64 (Intel) |
           | `jme-macos-arm64-15.tar.gz` | macos-15 | macOS 15, Apple Silicon |
           | `jme-macos-arm64-14.tar.gz` | macos-14 | macOS 14, Apple Silicon |
 
@@ -230,7 +217,6 @@ jobs:
           | Asset | Runner | Notes |
           |---|---|---|
           | `jme-windows-x64-2022.zip` | windows-2022 | MSVC 2022 runtime |
-          | `jme-windows-x64-2019.zip` | windows-2019 | MSVC 2019 runtime |
 
           JPL BSP kernels are not included. Download kernels from the native JME kernel release when using the JPL/CALCEPH backend.
           EOF

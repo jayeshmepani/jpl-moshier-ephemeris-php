@@ -926,11 +926,64 @@ CDEF;
             default => 'libjme.so',
         };
 
-        $dir = match ($family) {
-            'Windows' => 'windows-' . $arch,
-            'Darwin' => 'macos-' . $arch,
-            default => 'linux-' . $arch,
-        };
+        $dir = '';
+        if ($family === 'Windows') {
+            $dir = 'jme-windows-x64-2022';
+        } elseif ($family === 'Darwin') {
+            if ($arch === 'arm64') {
+                $darwinRelease = php_uname('r');
+                $majorDarwin = (int) explode('.', $darwinRelease)[0];
+                $version = ($majorDarwin >= 24) ? '15' : '14';
+                $dir = 'jme-macos-arm64-' . $version;
+                $libsDir = dirname(__DIR__, 2) . '/libs';
+                if (!file_exists($libsDir . '/' . $dir)) {
+                    $dir = ($version === '15') ? 'jme-macos-arm64-14' : 'jme-macos-arm64-15';
+                }
+            } else {
+                $dir = 'jme-macos-x64-15';
+            }
+        } else {
+            // Linux / other Unix
+            $glibcVersion = null;
+            if (function_exists('shell_exec')) {
+                $output = @shell_exec('getconf GNU_LIBC_VERSION 2>&1');
+                if ($output && preg_match('/glibc\s+(\d+\.\d+)/i', $output, $matches)) {
+                    $glibcVersion = (float) $matches[1];
+                }
+            }
+            if ($glibcVersion === null && file_exists('/etc/os-release')) {
+                $lines = @file('/etc/os-release', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                if ($lines !== false) {
+                    $osRelease = [];
+                    foreach ($lines as $line) {
+                        if (str_contains($line, '=')) {
+                            list($key, $val) = explode('=', $line, 2);
+                            $osRelease[trim($key)] = trim($val, '"\'');
+                        }
+                    }
+                    $id = $osRelease['ID'] ?? '';
+                    $versionId = $osRelease['VERSION_ID'] ?? '';
+                    if ($id === 'ubuntu' || ($osRelease['ID_LIKE'] ?? '') === 'ubuntu') {
+                        if (floatval($versionId) >= 24.0) {
+                            $glibcVersion = 2.39;
+                        }
+                    } elseif ($id === 'debian') {
+                        if (floatval($versionId) >= 13.0) {
+                            $glibcVersion = 2.39;
+                        }
+                    }
+                }
+            }
+
+            $suffix = ($glibcVersion !== null && $glibcVersion >= 2.39) ? 'ubuntu24' : 'ubuntu22';
+            $dir = 'jme-linux-' . $arch . '-' . $suffix;
+
+            // Check fallback if dir does not exist
+            $libsDir = dirname(__DIR__, 2) . '/libs';
+            if (!file_exists($libsDir . '/' . $dir)) {
+                $dir = 'jme-linux-' . $arch . '-' . ($suffix === 'ubuntu24' ? 'ubuntu22' : 'ubuntu24');
+            }
+        }
 
         return dirname(__DIR__, 2) . '/libs/' . $dir . '/' . $file;
     }

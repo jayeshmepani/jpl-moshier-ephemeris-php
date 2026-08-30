@@ -16,7 +16,7 @@ use JmeEph\FFI\JmeEphFFI;
  *
  * @author Jayesh Patel <jayeshmepani777@gmail.com>
  *
- * @mixin \JmeEph\FFI\JmeEphFFI
+ * @mixin JmeEphFFI
  *
  * @see \JmeEph\FFI\JmeEphFFI
  */

@@ -68,13 +68,13 @@ final class JmeEphFFITest extends TestCase
         }
 
         $apiTracking = file_get_contents($nativeRoot . '/docs/API_REFERENCE.md');
-        preg_match_all('/\|\s*\d+\s*\|\s*`(jme_[A-Za-z0-9_]+)`\s*\|/', $apiTracking, $nativeFunctionMatches);
+        preg_match_all('/\|\s*\d+\s*\|\s*`(jme_\w+)`\s*\|/', $apiTracking, $nativeFunctionMatches);
         $nativeFunctions = array_values(array_unique($nativeFunctionMatches[1]));
 
         $wrapperSource = file_get_contents(__DIR__ . '/../src/FFI/JmeEphFFI.php');
         $missingFunctions = array_values(array_filter(
             $nativeFunctions,
-            static fn (string $name): bool => ! preg_match('/\b' . preg_quote($name, '/') . '\b/', $wrapperSource)
+            static fn(string $name): bool => ! preg_match('/\b' . preg_quote($name, '/') . '\b/', $wrapperSource)
         ));
 
         $this->assertSame([], $missingFunctions);

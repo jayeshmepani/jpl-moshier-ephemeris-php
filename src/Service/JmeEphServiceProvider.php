@@ -53,7 +53,7 @@ final class JmeEphServiceProvider extends ServiceProvider
             return $ffi;
         });
 
-        $this->app->singleton(JmeService::class, fn ($app) => new JmeService(
+        $this->app->singleton(JmeService::class, fn($app) => new JmeService(
             $app->make(JmeEphFFI::class),
             $app->make('config')->get('jmeeph.engine', $app->make('config')->get('jmeeph.calculation_path', 'AUTO')),
             $app->make('config')->get('jmeeph.ephemeris_path')

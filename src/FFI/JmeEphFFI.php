@@ -9,26 +9,26 @@ use FFI\CData;
 use RuntimeException;
 
 /**
- * @method string jme_version(\FFI\CData $buffer, int $buffer_size)
+ * @method string jme_version(CData $buffer, int $buffer_size)
  * @method float jme_julian_day(int $year, int $month, int $day, float $hour, int $calendar)
  * @method void jme_set_sidereal_mode(int $sidereal_mode, float $t0, float $ayan_t0)
  * @method void jme_set_ephemeris_path(string $path)
  * @method void jme_set_jpl_file(string $path)
  * @method void jme_set_astro_models(string $models, int $flags)
- * @method int jme_jpl_open(?string $path, \FFI\CData $error)
- * @method ?\FFI\CData jme_ephemeris_path()
- * @method ?\FFI\CData jme_jpl_file()
- * @method int jme_calc_ut(float $jd_ut, int $body, int $flags, \FFI\CData $results, \FFI\CData $error)
- * @method int jme_houses(float $jd_ut, float $geo_lat, float $geo_lon, int $house_system, \FFI\CData $cusps, \FFI\CData $ascmc)
+ * @method int jme_jpl_open(?string $path, CData $error)
+ * @method ?CData jme_ephemeris_path()
+ * @method ?CData jme_jpl_file()
+ * @method int jme_calc_ut(float $jd_ut, int $body, int $flags, CData $results, CData $error)
+ * @method int jme_houses(float $jd_ut, float $geo_lat, float $geo_lon, int $house_system, CData $cusps, CData $ascmc)
  * @method float jme_get_ayanamsa_ut(float $jd_ut)
- * @method int jme_lun_eclipse_when(float $jd_start, int $flags, int $iflag, \FFI\CData $tret, int $backward, \FFI\CData $error)
- * @method int jme_sol_eclipse_when_glob(float $jd_start, int $flags, int $epheflag, \FFI\CData $tret, int $backward, \FFI\CData $error)
- * @method int jme_lun_eclipse_how(float $jd_ut, int $flags, \FFI\CData $geopos, \FFI\CData $attr, \FFI\CData $error)
- * @method int jme_lun_eclipse_when_loc(float $jd_start, int $flags, \FFI\CData $geopos, \FFI\CData $tret, \FFI\CData $attr, int $backward, \FFI\CData $error)
- * @method int jme_sol_eclipse_how(float $jd_ut, int $flags, \FFI\CData $geopos, \FFI\CData $attr, \FFI\CData $error)
- * @method int jme_sol_eclipse_when_loc(float $jd_start, int $flags, \FFI\CData $geopos, \FFI\CData $tret, \FFI\CData $attr, int $backward, \FFI\CData $error)
- * @method void jme_jd_to_utc(float $jd, int $calendar, \FFI\CData $year, \FFI\CData $month, \FFI\CData $day, \FFI\CData $hour, \FFI\CData $minute, \FFI\CData $second)
- * @method int jme_rise_trans(float $jd_ut, int $body, ?string $starname, int $flags, int $rsmi, \FFI\CData $geopos, float $atpress, float $attemp, \FFI\CData $tret, \FFI\CData $error)
+ * @method int jme_lun_eclipse_when(float $jd_start, int $flags, int $iflag, CData $tret, int $backward, CData $error)
+ * @method int jme_sol_eclipse_when_glob(float $jd_start, int $flags, int $epheflag, CData $tret, int $backward, CData $error)
+ * @method int jme_lun_eclipse_how(float $jd_ut, int $flags, CData $geopos, CData $attr, CData $error)
+ * @method int jme_lun_eclipse_when_loc(float $jd_start, int $flags, CData $geopos, CData $tret, CData $attr, int $backward, CData $error)
+ * @method int jme_sol_eclipse_how(float $jd_ut, int $flags, CData $geopos, CData $attr, CData $error)
+ * @method int jme_sol_eclipse_when_loc(float $jd_start, int $flags, CData $geopos, CData $tret, CData $attr, int $backward, CData $error)
+ * @method void jme_jd_to_utc(float $jd, int $calendar, CData $year, CData $month, CData $day, CData $hour, CData $minute, CData $second)
+ * @method int jme_rise_trans(float $jd_ut, int $body, ?string $starname, int $flags, int $rsmi, CData $geopos, float $atpress, float $attemp, CData $tret, CData $error)
  */
 class JmeEphFFI
 {
@@ -504,7 +504,7 @@ class JmeEphFFI
 
     private static bool $profileWritten = false;
 
-    private FFI $ffi;
+    private readonly FFI $ffi;
 
     public function __construct(?string $libraryPath = null)
     {
@@ -716,20 +716,20 @@ class JmeEphFFI
 CDEF;
 
         if ($libraryPath === null) {
-            $libraryPath = self::defaultLibraryPath();
+            $libraryPath = $this->defaultLibraryPath();
         }
 
         if (! file_exists($libraryPath)) {
             throw new RuntimeException('JME shared library not found at: ' . $libraryPath);
         }
 
-        self::prepareLibraryDirectory($libraryPath);
+        $this->prepareLibraryDirectory($libraryPath);
         $this->ffi = FFI::cdef($cdef, $libraryPath);
     }
 
     public function __call(string $name, array $arguments)
     {
-        if (! self::isProfileEnabled()) {
+        if (! $this->isProfileEnabled()) {
             return $this->ffi->$name(...$arguments);
         }
 
@@ -737,7 +737,7 @@ CDEF;
         try {
             return $this->ffi->$name(...$arguments);
         } finally {
-            self::recordProfile($name, hrtime(true) - $start);
+            $this->recordProfile($name, hrtime(true) - $start);
         }
     }
 
@@ -753,17 +753,17 @@ CDEF;
 
     public function jme_set_ephemeris_path(string $path): void
     {
-        $this->profileVoidCall('jme_set_ephemeris_path', fn (): mixed => $this->ffi->jme_set_ephemeris_path($path));
+        $this->profileVoidCall('jme_set_ephemeris_path', fn(): mixed => $this->ffi->jme_set_ephemeris_path($path));
     }
 
     public function jme_set_jpl_file(string $path): void
     {
-        $this->profileVoidCall('jme_set_jpl_file', fn (): mixed => $this->ffi->jme_set_jpl_file($path));
+        $this->profileVoidCall('jme_set_jpl_file', fn(): mixed => $this->ffi->jme_set_jpl_file($path));
     }
 
     public function jme_set_astro_models(string $models, int $flags): void
     {
-        $this->profileVoidCall('jme_set_astro_models', fn (): mixed => $this->ffi->jme_set_astro_models($models, $flags));
+        $this->profileVoidCall('jme_set_astro_models', fn(): mixed => $this->ffi->jme_set_astro_models($models, $flags));
     }
 
     public function configureEngine(string $engine, ?string $ephemerisPath = null, ?string $jplFile = null): void
@@ -794,67 +794,67 @@ CDEF;
 
     public function jme_jpl_open(?string $path, CData $error): int
     {
-        return $this->profileCall('jme_jpl_open', fn (): int => $this->ffi->jme_jpl_open($path, $error));
+        return $this->profileCall('jme_jpl_open', fn(): int => $this->ffi->jme_jpl_open($path, $error));
     }
 
     public function jme_calc_ut(float $jd_ut, int $body, int $flags, CData $results, CData $error): int
     {
         $name = 'jme_calc_ut/body=' . $body . '/flags=' . $flags;
-        if (self::isProfileEnabled()) {
+        if ($this->isProfileEnabled()) {
             self::$profileUniqueInputs[$name][$body . '|' . $flags . '|' . sprintf('%.17g', $jd_ut)] = true;
         }
 
-        return $this->profileCall($name, fn (): int => $this->ffi->jme_calc_ut($jd_ut, $body, $flags, $results, $error));
+        return $this->profileCall($name, fn(): int => $this->ffi->jme_calc_ut($jd_ut, $body, $flags, $results, $error));
     }
 
     public function jme_houses(float $jd_ut, float $geo_lat, float $geo_lon, int $house_system, CData $cusps, CData $ascmc): int
     {
-        return $this->profileCall('jme_houses', fn (): int => $this->ffi->jme_houses($jd_ut, $geo_lat, $geo_lon, $house_system, $cusps, $ascmc));
+        return $this->profileCall('jme_houses', fn(): int => $this->ffi->jme_houses($jd_ut, $geo_lat, $geo_lon, $house_system, $cusps, $ascmc));
     }
 
     public function jme_get_ayanamsa_ut(float $jd_ut): float
     {
-        return $this->profileCall('jme_get_ayanamsa_ut', fn (): float => $this->ffi->jme_get_ayanamsa_ut($jd_ut));
+        return $this->profileCall('jme_get_ayanamsa_ut', fn(): float => $this->ffi->jme_get_ayanamsa_ut($jd_ut));
     }
 
     public function jme_lun_eclipse_when(float $jd_start, int $flags, int $iflag, CData $tret, int $backward, CData $error): int
     {
-        return $this->profileCall('jme_lun_eclipse_when', fn (): int => $this->ffi->jme_lun_eclipse_when($jd_start, $flags, $iflag, $tret, $backward, $error));
+        return $this->profileCall('jme_lun_eclipse_when', fn(): int => $this->ffi->jme_lun_eclipse_when($jd_start, $flags, $iflag, $tret, $backward, $error));
     }
 
     public function jme_sol_eclipse_when_glob(float $jd_start, int $flags, int $epheflag, CData $tret, int $backward, CData $error): int
     {
-        return $this->profileCall('jme_sol_eclipse_when_glob', fn (): int => $this->ffi->jme_sol_eclipse_when_glob($jd_start, $flags, $epheflag, $tret, $backward, $error));
+        return $this->profileCall('jme_sol_eclipse_when_glob', fn(): int => $this->ffi->jme_sol_eclipse_when_glob($jd_start, $flags, $epheflag, $tret, $backward, $error));
     }
 
     public function jme_lun_eclipse_how(float $jd_ut, int $flags, CData $geopos, CData $attr, CData $error): int
     {
-        return $this->profileCall('jme_lun_eclipse_how', fn (): int => $this->ffi->jme_lun_eclipse_how($jd_ut, $flags, $geopos, $attr, $error));
+        return $this->profileCall('jme_lun_eclipse_how', fn(): int => $this->ffi->jme_lun_eclipse_how($jd_ut, $flags, $geopos, $attr, $error));
     }
 
     public function jme_lun_eclipse_when_loc(float $jd_start, int $flags, CData $geopos, CData $tret, CData $attr, int $backward, CData $error): int
     {
-        return $this->profileCall('jme_lun_eclipse_when_loc', fn (): int => $this->ffi->jme_lun_eclipse_when_loc($jd_start, $flags, $geopos, $tret, $attr, $backward, $error));
+        return $this->profileCall('jme_lun_eclipse_when_loc', fn(): int => $this->ffi->jme_lun_eclipse_when_loc($jd_start, $flags, $geopos, $tret, $attr, $backward, $error));
     }
 
     public function jme_sol_eclipse_how(float $jd_ut, int $flags, CData $geopos, CData $attr, CData $error): int
     {
-        return $this->profileCall('jme_sol_eclipse_how', fn (): int => $this->ffi->jme_sol_eclipse_how($jd_ut, $flags, $geopos, $attr, $error));
+        return $this->profileCall('jme_sol_eclipse_how', fn(): int => $this->ffi->jme_sol_eclipse_how($jd_ut, $flags, $geopos, $attr, $error));
     }
 
     public function jme_sol_eclipse_when_loc(float $jd_start, int $flags, CData $geopos, CData $tret, CData $attr, int $backward, CData $error): int
     {
-        return $this->profileCall('jme_sol_eclipse_when_loc', fn (): int => $this->ffi->jme_sol_eclipse_when_loc($jd_start, $flags, $geopos, $tret, $attr, $backward, $error));
+        return $this->profileCall('jme_sol_eclipse_when_loc', fn(): int => $this->ffi->jme_sol_eclipse_when_loc($jd_start, $flags, $geopos, $tret, $attr, $backward, $error));
     }
 
     public function jme_jd_to_utc(float $jd, int $calendar, CData $year, CData $month, CData $day, CData $hour, CData $minute, CData $second): void
     {
-        $this->profileVoidCall('jme_jd_to_utc', fn (): mixed => $this->ffi->jme_jd_to_utc($jd, $calendar, $year, $month, $day, $hour, $minute, $second));
+        $this->profileVoidCall('jme_jd_to_utc', fn(): mixed => $this->ffi->jme_jd_to_utc($jd, $calendar, $year, $month, $day, $hour, $minute, $second));
     }
 
     public function jme_rise_trans(float $jd_ut, int $body, ?string $starname, int $flags, int $rsmi, CData $geopos, float $atpress, float $attemp, CData $tret, CData $error): int
     {
-        return $this->profileCall('jme_rise_trans', fn (): int => $this->ffi->jme_rise_trans($jd_ut, $body, $starname, $flags, $rsmi, $geopos, $atpress, $attemp, $tret, $error));
+        return $this->profileCall('jme_rise_trans', fn(): int => $this->ffi->jme_rise_trans($jd_ut, $body, $starname, $flags, $rsmi, $geopos, $atpress, $attemp, $tret, $error));
     }
 
     public function getFFI(): FFI
@@ -895,7 +895,7 @@ CDEF;
             return;
         }
 
-        uasort(self::$profile, static fn (array $a, array $b): int => $b['ns'] <=> $a['ns']);
+        uasort(self::$profile, static fn(array $a, array $b): int => $b['ns'] <=> $a['ns']);
         fwrite(STDERR, "[jme-ffi-profile] method,calls,total_s,per_call_s\n");
         foreach (self::$profile as $name => $row) {
             $calls = max(1, $row['calls']);
@@ -910,7 +910,7 @@ CDEF;
         }
     }
 
-    private static function defaultLibraryPath(): string
+    private function defaultLibraryPath(): string
     {
         $family = PHP_OS_FAMILY;
         $arch = strtolower(php_uname('m'));
@@ -957,7 +957,7 @@ CDEF;
                     $osRelease = [];
                     foreach ($lines as $line) {
                         if (str_contains($line, '=')) {
-                            list($key, $val) = explode('=', $line, 2);
+                            [$key, $val] = explode('=', $line, 2);
                             $osRelease[trim($key)] = trim($val, '"\'');
                         }
                     }
@@ -988,7 +988,7 @@ CDEF;
         return dirname(__DIR__, 2) . '/libs/' . $dir . '/' . $file;
     }
 
-    private static function prepareLibraryDirectory(string $libraryPath): void
+    private function prepareLibraryDirectory(string $libraryPath): void
     {
         if (PHP_OS_FAMILY !== 'Windows') {
             return;
@@ -996,7 +996,7 @@ CDEF;
 
         $directory = dirname($libraryPath);
         $currentPath = getenv('PATH');
-        $segments = $currentPath === false ? [] : array_filter(explode(PATH_SEPARATOR, $currentPath), static fn (string $segment): bool => $segment !== '');
+        $segments = $currentPath === false ? [] : array_filter(explode(PATH_SEPARATOR, $currentPath), static fn(string $segment): bool => $segment !== '');
 
         foreach ($segments as $segment) {
             if (strcasecmp(rtrim($segment, '\\/'), rtrim($directory, '\\/')) === 0) {
@@ -1063,7 +1063,7 @@ CDEF;
      */
     private function profileCall(string $name, callable $call): mixed
     {
-        if (! self::isProfileEnabled()) {
+        if (! $this->isProfileEnabled()) {
             return $call();
         }
 
@@ -1071,14 +1071,14 @@ CDEF;
         try {
             return $call();
         } finally {
-            self::recordProfile($name, hrtime(true) - $start);
+            $this->recordProfile($name, hrtime(true) - $start);
         }
     }
 
     /** @param callable(): mixed $call */
     private function profileVoidCall(string $name, callable $call): void
     {
-        if (! self::isProfileEnabled()) {
+        if (! $this->isProfileEnabled()) {
             $call();
             return;
         }
@@ -1087,11 +1087,11 @@ CDEF;
         try {
             $call();
         } finally {
-            self::recordProfile($name, hrtime(true) - $start);
+            $this->recordProfile($name, hrtime(true) - $start);
         }
     }
 
-    private static function isProfileEnabled(): bool
+    private function isProfileEnabled(): bool
     {
         if (self::$profileEnabled !== null) {
             return self::$profileEnabled;
@@ -1116,7 +1116,7 @@ CDEF;
         return self::$profileEnabled;
     }
 
-    private static function recordProfile(string $name, int $elapsedNs): void
+    private function recordProfile(string $name, int $elapsedNs): void
     {
         self::$profile[$name] ??= ['calls' => 0, 'ns' => 0];
         self::$profile[$name]['calls']++;

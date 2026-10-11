@@ -132,9 +132,9 @@ This package aims for **100% compatibility with the project-owned JME native con
 
 ### Native Library Licensing
 
-This repository is licensed under **AGPL-3.0-or-later**.
+The project-authored code in this repository is licensed under the **MIT License** (see `LICENSE`). The distributed package is `MIT AND CeCILL-B` because it bundles prebuilt CALCEPH 4.0.5 binaries under CeCILL-B (see `LICENSES/CeCILL-B.txt`).
 
-Contributions to this repository are accepted under AGPL-3.0 or later, while any third-party native libraries or data bundled with a deployment must keep their own licenses and notices.
+Contributions to this repository are accepted under the MIT License. Third-party native libraries or data bundled with a deployment keep their own licenses and notices; see `THIRD_PARTY_NOTICES.md`.
 
 ## Release Process
 

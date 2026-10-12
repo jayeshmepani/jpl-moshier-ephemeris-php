@@ -863,7 +863,6 @@ CDEF;
         }
     }
 
-
     public function supportsExtendedApi(): bool
     {
         return $this->extendedApiAvailable;

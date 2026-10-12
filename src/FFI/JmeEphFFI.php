@@ -6,6 +6,7 @@ namespace JmeEph\FFI;
 
 use FFI;
 use FFI\CData;
+use FFI\Exception as FFIException;
 use RuntimeException;
 
 /**
@@ -801,7 +802,7 @@ CDEF;
         try {
             $this->ffi = FFI::cdef($cdef, $libraryPath);
             $this->extendedApiAvailable = true;
-        } catch (\FFI\Exception $exception) {
+        } catch (FFIException $exception) {
             if (! $this->isExtendedApiResolutionFailure($exception->getMessage())) {
                 throw $exception;
             }
@@ -834,17 +835,6 @@ CDEF;
         } finally {
             $this->recordProfile($name, hrtime(true) - $start);
         }
-    }
-
-    private function isExtendedApiResolutionFailure(string $message): bool
-    {
-        foreach (self::OPTIONAL_API_FUNCTIONS as $function) {
-            if (str_contains($message, "Failed resolving C function '" . $function . "'")) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     public function supportsExtendedApi(): bool
@@ -1019,6 +1009,17 @@ CDEF;
                 fwrite(STDERR, sprintf("[jme-ffi-profile-unique] %s,%d\n", $name, count(self::$profileUniqueInputs[$name])));
             }
         }
+    }
+
+    private function isExtendedApiResolutionFailure(string $message): bool
+    {
+        foreach (self::OPTIONAL_API_FUNCTIONS as $function) {
+            if (str_contains($message, "Failed resolving C function '" . $function . "'")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function defaultLibraryPath(): string

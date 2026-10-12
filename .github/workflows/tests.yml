@@ -39,7 +39,7 @@ jobs:
         with:
           repository: jayeshmepani/jpl-ephemeris
           # C engine PR #3 head; switch back to main after that PR is merged.
-          ref: f08dac8b6aa6aec749116ca5c6528fb17289346c
+          ref: c15031e4ba66f14ee2e8170e05e0f664d9ac70a8
           path: native
 
       - name: Setup PHP

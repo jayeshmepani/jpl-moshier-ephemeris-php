@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * C engine API added in jpl-ephemeris PR #3. Expected values were printed by
- * the C library itself (%.17g) at jpl-ephemeris f08dac8; the wrapper must pass
+ * the C library itself (%.17g) at jpl-ephemeris c15031e; the wrapper must pass
  * them through unchanged. Arithmetic-only results are compared exactly; results
  * that go through libm transcendental functions allow 1e-14 relative.
  */

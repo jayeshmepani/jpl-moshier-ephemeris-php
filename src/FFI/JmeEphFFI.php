@@ -514,6 +514,7 @@ class JmeEphFFI
             int jme_calc(double jd_et, int body, int flags, double *results, char *error);
             int jme_calc_pctr(double jd_et, int body, int center, int flags, double *results, char *error);
             int jme_calc_ut(double jd_ut, int body, int flags, double *results, char *error);
+            int jme_calc_resolve_engine(double jd_et, int body, int *engine_id, int *jpl_center_substituted, char *error);
             int jme_calendar_is_leap_year(int year, int calendar);
             int jme_centiseconds_difference(int p1, int p2);
             int jme_centiseconds_difference_signed(int p1, int p2);
@@ -533,6 +534,7 @@ class JmeEphFFI
             double jme_degrees_to_radians(double degrees);
             double jme_delta_t(double jd_ut);
             double jme_delta_t_ex(double jd_ut, int model, char *error);
+            int jme_delta_t_iers_table_info(double *jd_first, double *jd_last_observed, double *jd_last, char *error);
             int jme_double_to_long(double x);
             void jme_ecliptic_to_equatorial( double lon, double lat, double eps, double *ra, double *dec );
             int jme_ecliptic_to_equatorial_rectangular_state( const double *ecliptic, double eps, double *equatorial );
@@ -551,6 +553,8 @@ class JmeEphFFI
             double jme_get_ayanamsa(double jd_et);
             int jme_get_ayanamsa_ex(double jd_et, int model, double *ayan, char *error);
             int jme_get_ayanamsa_ex_ut(double jd_ut, int model, double *ayan, char *error);
+            int jme_get_ayanamsa_ex2(double jd_et, int model, int flags, double *ayan, double *rate, char *error);
+            int jme_get_ayanamsa_ex2_ut(double jd_ut, int model, int flags, double *ayan, double *rate, char *error);
             double jme_get_ayanamsa_ut(double jd_ut);
             int jme_get_nutation(double jd_et, int model, double *dpsi, double *deps, char *error);
             void jme_get_nutation_matrix(double dpsi_rad, double deps_rad, double eps_rad, double *m);
@@ -559,7 +563,9 @@ class JmeEphFFI
             int jme_get_precession_matrix(double jd_start, double jd_end, int model, double *m);
             void jme_get_sidereal_mode(int *sidereal_mode, double *t0, double *ayan_t0);
             double jme_get_tid_acc(void);
+            int jme_get_jpl_center_policy(void);
             int jme_get_topo_pos(double jd_et, double *pos_au, char *error);
+            int jme_leap_second_table_info(double *jd_utc_valid_until, double *last_tai_minus_utc, char *error);
             double jme_heliacal_angle(double jd_ut, double *geopos, double *dat_hel, char *error);
             int jme_heliacal_pheno_ut(double jd_ut, double *geopos, double *dat_hel, char *error);
             int jme_heliacal_ut(double jd_ut, double *geopos, double *dat_hel, char *error);
@@ -574,6 +580,8 @@ class JmeEphFFI
             int jme_houses_armc_ex2(double armc, double geo_lat, double eps, int house_system, double *cusps, double *ascmc, double *cusps_speed, double *ascmc_speed);
             int jme_houses_ex(double jd_ut, int flags, double geo_lat, double geo_lon, int house_system, double *cusps, double *ascmc);
             int jme_houses_ex2(double jd_ut, int flags, double geo_lat, double geo_lon, int house_system, double *cusps, double *ascmc, double *cusps_speed, double *ascmc_speed);
+            int jme_houses_gauquelin(double jd_ut, int flags, double geo_lat, double geo_lon, double *cusps, double *ascmc, char *error);
+            int jme_houses_gauquelin_armc(double armc, double geo_lat, double eps, double *cusps, double *ascmc, char *error);
             double jme_jd_add_seconds(double jd, double seconds);
             double jme_jd_difference_seconds(double jd_end, double jd_start);
             void jme_jd_to_utc( double jd, int calendar, int *year, int *month, int *day, int *hour, int *minute, double *second );
@@ -666,16 +674,21 @@ class JmeEphFFI
             int jme_rise_trans(double jd_ut, int body, const char *starname, int flags, int rsmi, double *geopos, double atpress, double attemp, double *tret, char *error);
             int jme_rise_trans_true_hor(double jd_ut, int body, const char *starname, int flags, int rsmi, double *geopos, double atpress, double attemp, double horhgt, double *tret, char *error);
             void jme_set_astro_models(const char *models, int flags);
+            int jme_set_astro_models_checked(const char *models, char *error);
             void jme_set_delta_t_userdef(double dt);
             void jme_set_ephemeris_path(const char *path);
             void jme_set_interpolate_nut(int on);
             void jme_set_jpl_file(const char *path);
+            int jme_set_jpl_center_policy(int policy, char *error);
             void jme_set_lapse_rate(double lapse_rate);
             void jme_set_sidereal_mode(int sidereal_mode, double t0, double ayan_t0);
+            int jme_set_sidereal_mode_checked(int sidereal_mode, double t0, double ayan_t0, char *error);
             void jme_set_tid_acc(double t_acc);
             void jme_set_topo(double lon, double lat, double altitude);
+            int jme_set_topo_checked(double lon, double lat, double altitude, char *error);
             double jme_sidereal_time(double jd_ut);
             double jme_sidereal_time0(double jd_ut, double eps, double nut);
+            int jme_sidereal_time_ex(double jd_ut, int apparent, double *hours, char *error);
             int jme_sol_eclipse_how(double jd_ut, int flags, double *geopos, double *attr, char *error);
             int jme_sol_eclipse_when_glob(double jd_start, int flags, int epheflag, double *tret, int backward, char *error);
             int jme_sol_eclipse_when_loc(double jd_start, int flags, double *geopos, double *tret, double *attr, int backward, char *error);
@@ -695,6 +708,8 @@ class JmeEphFFI
             double jme_state_speed(const double *state);
             int jme_state_subtract(const double *left, const double *right, double *output);
             int jme_time_equ(double jd_ut, double *e, char *error);
+            int jme_time_scale_convert(double jd1, double jd2, int from_scale, int to_scale, double *out1, double *out2, char *error);
+            const char *jme_time_scale_name(int scale);
             double jme_topo_arcus_visionis(double jd_ut, double *geopos, double *dat_hel, char *error);
             void jme_utc_time_zone( int year, int month, int day, int hour, int minute, double second, double timezone, int *out_year, int *out_month, int *out_day, int *out_hour, int *out_minute, double *out_second );
             int jme_utc_to_jd( int year, int month, int day, int hour, int minute, double second, int calendar, double *jd_utc );

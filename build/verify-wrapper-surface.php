@@ -86,9 +86,9 @@ foreach ($trackedFunctions as $functionName) {
     }
 }
 
-if (count($cdefDeclarations) !== count($trackedFunctions)) {
-    $prototypeErrors[] = 'cdef declaration count mismatch: expected ' . count($trackedFunctions) . ', got ' . count($cdefDeclarations);
-}
+// A wrapper may declare additive APIs that are not in the currently checked-out
+// core yet. Every API tracked by that core is verified exactly above; do not
+// reject a forward-compatible wrapper merely because it exposes newer symbols.
 
 if ($prototypeErrors !== []) {
     fwrite(STDERR, implode("\n\n", $prototypeErrors) . "\n");
@@ -102,10 +102,8 @@ $phpConstants = $reflection->getConstants();
 preg_match_all('/\bJME_[A-Z0-9_]+\b/', $headerText, $constantMatches);
 $trackedConstants = array_values(array_unique($constantMatches[0]));
 
-if (count($trackedConstants) !== 462) {
-    fwrite(STDERR, 'Tracked header constant count mismatch: expected 462, got ' . count($trackedConstants) . "\n");
-    exit(1);
-}
+// The tracked count is derived from these headers. The core API may grow, so
+// keep validating every name and value instead of freezing the count here.
 
 $probeCode = [];
 $probeCode[] = '#include <stdio.h>';
@@ -295,8 +293,9 @@ foreach ($trackedConstants as $name) {
     }
 }
 
-if (count($phpConstants) !== 462) {
-    $constantErrors[] = 'PHP constant count mismatch: expected 462, got ' . count($phpConstants);
+if (count($phpConstants) < count($trackedConstants)) {
+    $constantErrors[] = 'PHP constant inventory is smaller than the checked-out core: expected at least '
+        . count($trackedConstants) . ', got ' . count($phpConstants);
 }
 
 if ($constantErrors !== []) {

@@ -789,19 +789,19 @@ CDEF;
         }
 
         $this->prepareLibraryDirectory($libraryPath);
-        $optionalFunctionPattern = '/\\b(?:' . implode('|', array_map(
+        $optionalFunctionPattern = '/\b(?:' . implode('|', array_map(
             static fn (string $function): string => preg_quote($function, '/'),
             self::OPTIONAL_API_FUNCTIONS
-        )) . ')\\s*\\(/';
-        $baseCdef = implode("\\n", array_filter(
-            explode("\\n", $cdef),
+        )) . ')\s*\(/';
+        $baseCdef = implode("\n", array_filter(
+            explode("\n", $cdef),
             static fn (string $line): bool => preg_match($optionalFunctionPattern, $line) !== 1
         ));
 
         try {
             $this->ffi = FFI::cdef($cdef, $libraryPath);
             $this->extendedApiAvailable = true;
-        } catch (\\FFI\\Exception $exception) {
+        } catch (\FFI\Exception $exception) {
             if (! $this->isExtendedApiResolutionFailure($exception->getMessage())) {
                 throw $exception;
             }

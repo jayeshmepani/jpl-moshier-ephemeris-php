@@ -38,6 +38,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jayeshmepani/jpl-ephemeris
+          # C engine PR #3 head; switch back to main after that PR is merged.
+          ref: f08dac8b6aa6aec749116ca5c6528fb17289346c
           path: native
 
       - name: Setup PHP

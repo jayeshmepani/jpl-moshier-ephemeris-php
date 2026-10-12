@@ -45,6 +45,12 @@ use RuntimeException;
  * @method int jme_sidereal_time_ex(float $jd_ut, int $apparent, CData $hours, CData $error)
  * @method int jme_houses_gauquelin(float $jd_ut, int $flags, float $geo_lat, float $geo_lon, CData $cusps, CData $ascmc, CData $error)
  * @method int jme_houses_gauquelin_armc(float $armc, float $geo_lat, float $eps, CData $cusps, CData $ascmc, CData $error)
+ * @method int jme_eop_load_file(string $path, CData $error)
+ * @method void jme_eop_clear()
+ * @method int jme_eop_coverage(CData $mjd_first, CData $mjd_last, CData $error)
+ * @method int jme_eop_polar_motion(float $mjd, CData $xp_arcsec, CData $yp_arcsec, CData $predicted, CData $error)
+ * @method void jme_set_polar_motion(int $enabled)
+ * @method int jme_get_polar_motion()
  */
 class JmeEphFFI
 {
@@ -455,6 +461,9 @@ class JmeEphFFI
     public const JME_MODEL_DELTAT_STEPHENSON_MORRISON_2004 = 348;
     public const JME_MODEL_DELTAT_ESPENAK_MEEUS_2006 = 349;
     public const JME_MODEL_DELTAT_STEPHENSON_ETC_2016 = 350;
+    public const JME_MODEL_DELTAT_STEPHENSON_ETC_2021 = 407;
+    public const JME_MODEL_DELTAT_MS2004_TABLE1_LINEAR = 408;
+    public const JME_MODEL_NUT_IAU_2006A = 351;
     public const JME_RISE_ANTI_MERIDIAN_TRANSIT = 8;
     public const JME_RISE_ASTRONOMICAL_TWILIGHT = 512;
     public const JME_RISE_CIVIL_TWILIGHT = 128;
@@ -534,6 +543,12 @@ class JmeEphFFI
         'jme_get_jpl_center_policy',
         'jme_houses_gauquelin',
         'jme_houses_gauquelin_armc',
+        'jme_eop_load_file',
+        'jme_eop_clear',
+        'jme_eop_coverage',
+        'jme_eop_polar_motion',
+        'jme_set_polar_motion',
+        'jme_get_polar_motion',
         'jme_leap_second_table_info',
         'jme_set_astro_models_checked',
         'jme_set_jpl_center_policy',
@@ -633,6 +648,12 @@ class JmeEphFFI
             int jme_houses_ex2(double jd_ut, int flags, double geo_lat, double geo_lon, int house_system, double *cusps, double *ascmc, double *cusps_speed, double *ascmc_speed);
             int jme_houses_gauquelin(double jd_ut, int flags, double geo_lat, double geo_lon, double *cusps, double *ascmc, char *error);
             int jme_houses_gauquelin_armc(double armc, double geo_lat, double eps, double *cusps, double *ascmc, char *error);
+            int jme_eop_load_file(const char *path, char *error);
+            void jme_eop_clear(void);
+            int jme_eop_coverage(double *mjd_first, double *mjd_last, char *error);
+            int jme_eop_polar_motion(double mjd, double *xp_arcsec, double *yp_arcsec, int *predicted, char *error);
+            void jme_set_polar_motion(int enabled);
+            int jme_get_polar_motion(void);
             double jme_jd_add_seconds(double jd, double seconds);
             double jme_jd_difference_seconds(double jd_end, double jd_start);
             void jme_jd_to_utc( double jd, int calendar, int *year, int *month, int *day, int *hour, int *minute, double *second );

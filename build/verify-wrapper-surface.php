@@ -223,7 +223,7 @@ if ($compileExit === 0) {
         if (preg_match_all('/typedef\s+enum\s+[^{]*\{(.*?)\}\s*[A-Za-z0-9_]+\s*;/s', $header, $enumMatches, PREG_SET_ORDER)) {
             foreach ($enumMatches as $enumMatch) {
                 $nextValue = null;
-                foreach (explode(',', $enumMatch[1]) as $entry) {
+                foreach (explode(',', (string) preg_replace('!/\*.*?\*/!s', '', $enumMatch[1])) as $entry) {
                     $entry = trim(preg_replace('!/\*.*?\*/!s', '', $entry));
                     if ($entry === '' || ! preg_match('/^(JME_[A-Z0-9_]+)\s*(?:=\s*(.+))?$/s', $entry, $enumEntryMatch)) {
                         continue;

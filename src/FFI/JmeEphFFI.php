@@ -525,11 +525,6 @@ class JmeEphFFI
     public const JME_ENGINE_ID_JPL = 1;
     public const JME_ENGINE_ID_MOSHIER = 2;
     public const JME_ENGINE_ID_VSOP87_ELP82B = 3;
-    /** @var array<string, array{calls: int, ns: int}> */
-    private static array $profile = [];
-
-    /** @var array<string, array<string, true>> */
-    private static array $profileUniqueInputs = [];
 
     private const OPTIONAL_API_FUNCTIONS = [
         'jme_calc_resolve_engine',
@@ -548,6 +543,11 @@ class JmeEphFFI
         'jme_time_scale_convert',
         'jme_time_scale_name',
     ];
+    /** @var array<string, array{calls: int, ns: int}> */
+    private static array $profile = [];
+
+    /** @var array<string, array<string, true>> */
+    private static array $profileUniqueInputs = [];
 
     private static ?bool $profileEnabled = null;
 
@@ -791,12 +791,12 @@ CDEF;
 
         $this->prepareLibraryDirectory($libraryPath);
         $optionalFunctionPattern = '/\b(?:' . implode('|', array_map(
-            static fn (string $function): string => preg_quote($function, '/'),
+            static fn(string $function): string => preg_quote($function, '/'),
             self::OPTIONAL_API_FUNCTIONS
         )) . ')\s*\(/';
         $baseCdef = implode("\n", array_filter(
             explode("\n", $cdef),
-            static fn (string $line): bool => preg_match($optionalFunctionPattern, $line) !== 1
+            static fn(string $line): bool => preg_match($optionalFunctionPattern, $line) !== 1
         ));
 
         try {

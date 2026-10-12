@@ -117,7 +117,7 @@ foreach ($headers as $header) {
 
     if (preg_match_all('/typedef\s+enum\s+[^{]*\{(.*?)\}\s*[A-Za-z0-9_]+\s*;/s', $header, $enumMatches, PREG_SET_ORDER)) {
         foreach ($enumMatches as $enumMatch) {
-            $entries = explode(',', $enumMatch[1]);
+            $entries = explode(',', (string) preg_replace('!/\*.*?\*/!s', '', $enumMatch[1]));
             $nextValue = null;
             foreach ($entries as $entry) {
                 $entry = trim(preg_replace('!/\*.*?\*/!s', '', $entry));
@@ -157,80 +157,75 @@ $cdefLines = array_map(
     $orderedDeclarations
 );
 
-$generated = <<<PHP
-<?php
-
-declare(strict_types=1);
-
-namespace JmeEph\\FFI;
-
-use FFI;
-use RuntimeException;
-
-class JmeEphFFI
-{
-%s
-
-    private FFI \$ffi;
-
-    public function __construct(?string \$libraryPath = null)
-    {
-        \$cdef = <<<'CDEF'
-%s
-CDEF;
-
-        if (\$libraryPath === null) {
-            \$libraryPath = self::defaultLibraryPath();
-        }
-
-        if (! file_exists(\$libraryPath)) {
-            throw new RuntimeException('JME shared library not found at: ' . \$libraryPath);
-        }
-
-        \$this->ffi = FFI::cdef(\$cdef, \$libraryPath);
-    }
-
-    private static function defaultLibraryPath(): string
-    {
-        \$family = PHP_OS_FAMILY;
-        \$arch = strtolower(php_uname('m'));
-        \$arch = match (true) {
-            in_array(\$arch, ['x86_64', 'amd64'], true) => 'x64',
-            in_array(\$arch, ['aarch64', 'arm64'], true) => 'arm64',
-            default => \$arch,
-        };
-
-        \$file = match (\$family) {
-            'Windows' => 'jme.dll',
-            'Darwin' => 'libjme.dylib',
-            default => 'libjme.so',
-        };
-
-        \$dir = match (\$family) {
-            'Windows' => 'windows-' . \$arch,
-            'Darwin' => 'macos-' . \$arch,
-            default => 'linux-' . \$arch,
-        };
-
-        return dirname(__DIR__, 2) . '/libs/' . \$dir . '/' . \$file;
-    }
-
-    public function getFFI(): FFI
-    {
-        return \$this->ffi;
-    }
-
-    public function __call(string \$name, array \$arguments)
-    {
-        return \$this->ffi->\$name(...\$arguments);
-    }
-}
-PHP;
-
-$generated = sprintf($generated, implode("\n", $constantLines), implode("\n", $cdefLines));
-
 $outputPath = $root . '/src/FFI/JmeEphFFI.php';
-file_put_contents($outputPath, $generated);
+$current = file_get_contents($outputPath);
+if ($current === false) {
+    throw new RuntimeException("Cannot read {$outputPath}");
+}
+
+// The wrapper class is maintained by hand (engine selection, library
+// resolution, profiling, typed helpers). Only two regions are derived from
+// the native headers and rewritten here: the JME_* constant block and the
+// FFI cdef heredoc. Everything else in the file is preserved byte for byte.
+$constantBlock = '/^(?:    public const JME_[A-Z0-9_]+ = [^\n]*;\n)+/m';
+if (preg_match_all($constantBlock, $current, $blocks) !== 1) {
+    throw new RuntimeException('Expected exactly one contiguous JME_* constant block in ' . $outputPath);
+}
+$current = (string) preg_replace($constantBlock, implode("\n", $constantLines) . "\n", $current, 1);
+
+$cdefBlock = "/(\\\$cdef = <<<'CDEF'\n).*?(\nCDEF;)/s";
+if (preg_match_all($cdefBlock, $current) !== 1) {
+    throw new RuntimeException('Expected exactly one CDEF heredoc in ' . $outputPath);
+}
+$current = (string) preg_replace_callback(
+    $cdefBlock,
+    static fn (array $m): string => $m[1] . implode("\n", $cdefLines) . $m[2],
+    $current,
+    1
+);
+
+file_put_contents($outputPath, $current);
+
+// PHPStan stub: declares every native entry point as a method of FFI so that
+// direct $ffi->jme_*() calls are statically checked against the C prototypes.
+$phpType = static function (string $cType, bool $isReturn): string {
+    $t = trim((string) preg_replace('/\s+/', ' ', $cType));
+    $isPointer = str_contains($t, '*');
+    $base = trim(str_replace(['const ', '*'], '', $t));
+    if (! $isPointer) {
+        return match ($base) {
+            'double', 'float' => 'float',
+            'void' => 'void',
+            default => 'int',
+        };
+    }
+    if ($base === 'char') {
+        return $isReturn ? 'string|\FFI\CData|null' : 'string|\FFI\CData|null';
+    }
+
+    return '\FFI\CData|null';
+};
+$methodLines = [];
+foreach ($orderedDeclarations as $declaration) {
+    if (! preg_match('/^(.*?)\b(jme_[a-z0-9_]+)\s*\((.*)\)\s*;$/s', trim($declaration), $parts)) {
+        throw new RuntimeException("Cannot parse declaration: {$declaration}");
+    }
+    $params = [];
+    $rawParams = trim($parts[3]);
+    if ($rawParams !== '' && $rawParams !== 'void') {
+        foreach (explode(',', $rawParams) as $param) {
+            if (! preg_match('/^(.*?)([A-Za-z_][A-Za-z0-9_]*)\s*(\[\s*\d*\s*\])?$/s', trim($param), $p)) {
+                throw new RuntimeException("Cannot parse parameter: {$param}");
+            }
+            $cType = $p[1] . (isset($p[3]) && $p[3] !== '' ? '*' : '');
+            $params[] = $phpType($cType, false) . ' $' . $p[2];
+        }
+    }
+    $methodLines[] = ' * @method ' . $phpType($parts[1], true) . ' ' . $parts[2] . '(' . implode(', ', $params) . ')';
+}
+$stub = "<?php\n\n// Generated by build/generate-wrapper.php from the native JME headers.\n\n/**\n"
+    . implode("\n", $methodLines) . "\n */\nfinal class FFI\n{\n}\n";
+file_put_contents($root . '/stubs/FFI.stub', $stub);
 
 echo "Generated wrapper: {$outputPath}\n";
 echo "Functions: " . count($trackedFunctions) . "\n";

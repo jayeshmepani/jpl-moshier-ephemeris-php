@@ -45,6 +45,12 @@ use RuntimeException;
  * @method int jme_sidereal_time_ex(float $jd_ut, int $apparent, CData $hours, CData $error)
  * @method int jme_houses_gauquelin(float $jd_ut, int $flags, float $geo_lat, float $geo_lon, CData $cusps, CData $ascmc, CData $error)
  * @method int jme_houses_gauquelin_armc(float $armc, float $geo_lat, float $eps, CData $cusps, CData $ascmc, CData $error)
+ * @method int jme_eop_load_file(string $path, CData $error)
+ * @method void jme_eop_clear()
+ * @method int jme_eop_coverage(CData $mjd_first, CData $mjd_last, CData $error)
+ * @method int jme_eop_polar_motion(float $mjd, CData $xp_arcsec, CData $yp_arcsec, CData $predicted, CData $error)
+ * @method void jme_set_polar_motion(int $enabled)
+ * @method int jme_get_polar_motion()
  */
 class JmeEphFFI
 {
@@ -455,6 +461,9 @@ class JmeEphFFI
     public const JME_MODEL_DELTAT_STEPHENSON_MORRISON_2004 = 348;
     public const JME_MODEL_DELTAT_ESPENAK_MEEUS_2006 = 349;
     public const JME_MODEL_DELTAT_STEPHENSON_ETC_2016 = 350;
+    public const JME_MODEL_DELTAT_STEPHENSON_ETC_2021 = 407;
+    public const JME_MODEL_DELTAT_MS2004_TABLE1_LINEAR = 408;
+    public const JME_MODEL_NUT_IAU_2006A = 351;
     public const JME_RISE_ANTI_MERIDIAN_TRANSIT = 8;
     public const JME_RISE_ASTRONOMICAL_TWILIGHT = 512;
     public const JME_RISE_CIVIL_TWILIGHT = 128;
@@ -526,7 +535,7 @@ class JmeEphFFI
     public const JME_ENGINE_ID_MOSHIER = 2;
     public const JME_ENGINE_ID_VSOP87_ELP82B = 3;
 
-    private const OPTIONAL_API_FUNCTIONS = [
+    private const array OPTIONAL_API_FUNCTIONS = [
         'jme_calc_resolve_engine',
         'jme_delta_t_iers_table_info',
         'jme_get_ayanamsa_ex2',
@@ -534,6 +543,12 @@ class JmeEphFFI
         'jme_get_jpl_center_policy',
         'jme_houses_gauquelin',
         'jme_houses_gauquelin_armc',
+        'jme_eop_load_file',
+        'jme_eop_clear',
+        'jme_eop_coverage',
+        'jme_eop_polar_motion',
+        'jme_set_polar_motion',
+        'jme_get_polar_motion',
         'jme_leap_second_table_info',
         'jme_set_astro_models_checked',
         'jme_set_jpl_center_policy',
@@ -562,16 +577,21 @@ class JmeEphFFI
         $cdef = <<<'CDEF'
             int jme_body_id_from_name(const char *name);
             int jme_body_naif_id(int body);
+            const char *jme_body_name(int body);
             int jme_calc(double jd_et, int body, int flags, double *results, char *error);
             int jme_calc_pctr(double jd_et, int body, int center, int flags, double *results, char *error);
-            int jme_calc_ut(double jd_ut, int body, int flags, double *results, char *error);
             int jme_calc_resolve_engine(double jd_et, int body, int *engine_id, int *jpl_center_substituted, char *error);
+            int jme_calc_ut(double jd_ut, int body, int flags, double *results, char *error);
             int jme_calendar_is_leap_year(int year, int calendar);
             int jme_centiseconds_difference(int p1, int p2);
             int jme_centiseconds_difference_signed(int p1, int p2);
             int jme_centiseconds_normalize(int p);
             int jme_centiseconds_round_second(int x);
+            char *jme_centiseconds_to_degree_string(int cs, char *buffer);
+            char *jme_centiseconds_to_lonlat_string(int cs, char *buffer);
+            char *jme_centiseconds_to_time_string(int cs, char *buffer);
             void jme_close(void);
+            char *jme_copy_body_name(int body, char *buffer);
             int jme_date_is_valid(int year, int month, int day, int calendar);
             int jme_day_of_week(double jd);
             int jme_day_of_year(int year, int month, int day, int calendar);
@@ -590,33 +610,40 @@ class JmeEphFFI
             void jme_ecliptic_to_equatorial( double lon, double lat, double eps, double *ra, double *dec );
             int jme_ecliptic_to_equatorial_rectangular_state( const double *ecliptic, double eps, double *equatorial );
             int jme_elp2000_moon_state(double jd_et, double *results);
+            void jme_eop_clear(void);
+            int jme_eop_coverage(double *mjd_first, double *mjd_last, char *error);
+            int jme_eop_load_file(const char *path, char *error);
+            int jme_eop_polar_motion(double mjd, double *xp_arcsec, double *yp_arcsec, int *predicted, char *error);
+            const char *jme_ephemeris_path(void);
             void jme_equatorial_to_ecliptic( double ra, double dec, double eps, double *lon, double *lat );
             int jme_equatorial_to_ecliptic_rectangular_state( const double *equatorial, double eps, double *ecliptic );
             void jme_equatorial_to_horizontal( double hour_angle, double dec, double geo_lat, double *azimuth, double *altitude );
             int jme_fixstar(const char *star, double jd_et, int flags, double *results, char *error);
-            int jme_fixstar_mag(const char *star, double *mag, char *error);
-            int jme_fixstar_ut(const char *star, double jd_ut, int flags, double *results, char *error);
             int jme_fixstar2(const char *star, double jd_et, int flags, double *results, char *error);
             int jme_fixstar2_mag(const char *star, double *mag, char *error);
             int jme_fixstar2_ut(const char *star, double jd_ut, int flags, double *results, char *error);
+            int jme_fixstar_mag(const char *star, double *mag, char *error);
+            int jme_fixstar_ut(const char *star, double jd_ut, int flags, double *results, char *error);
             int jme_gauquelin_sector(double jd_ut, int body, const char *starname, int flags, int imeth, double *geopos, double atpress, double attemp, double *dgsect, char *error);
             int jme_get_astro_models(char *models, int flags);
             double jme_get_ayanamsa(double jd_et);
             int jme_get_ayanamsa_ex(double jd_et, int model, double *ayan, char *error);
-            int jme_get_ayanamsa_ex_ut(double jd_ut, int model, double *ayan, char *error);
             int jme_get_ayanamsa_ex2(double jd_et, int model, int flags, double *ayan, double *rate, char *error);
             int jme_get_ayanamsa_ex2_ut(double jd_ut, int model, int flags, double *ayan, double *rate, char *error);
+            int jme_get_ayanamsa_ex_ut(double jd_ut, int model, double *ayan, char *error);
+            const char *jme_get_ayanamsa_name(int model);
             double jme_get_ayanamsa_ut(double jd_ut);
+            int jme_get_frame_bias_matrix(int model, double *m);
+            int jme_get_jpl_center_policy(void);
             int jme_get_nutation(double jd_et, int model, double *dpsi, double *deps, char *error);
             void jme_get_nutation_matrix(double dpsi_rad, double deps_rad, double eps_rad, double *m);
             int jme_get_obliquity(double jd_et, int model, double *eps, char *error);
             int jme_get_orbital_elements(double jd_et, int body, int flags, double *elem, char *error);
+            int jme_get_polar_motion(void);
             int jme_get_precession_matrix(double jd_start, double jd_end, int model, double *m);
             void jme_get_sidereal_mode(int *sidereal_mode, double *t0, double *ayan_t0);
             double jme_get_tid_acc(void);
-            int jme_get_jpl_center_policy(void);
             int jme_get_topo_pos(double jd_et, double *pos_au, char *error);
-            int jme_leap_second_table_info(double *jd_utc_valid_until, double *last_tai_minus_utc, char *error);
             double jme_heliacal_angle(double jd_ut, double *geopos, double *dat_hel, char *error);
             int jme_heliacal_pheno_ut(double jd_ut, double *geopos, double *dat_hel, char *error);
             int jme_heliacal_ut(double jd_ut, double *geopos, double *dat_hel, char *error);
@@ -626,6 +653,7 @@ class JmeEphFFI
             double jme_hours_normalize(double hours);
             double jme_hours_to_degrees(double hours);
             double jme_house_pos(double armc, double geo_lat, double eps, int house_system, double *xpin, char *error);
+            const char *jme_house_system_name(int house_system);
             int jme_houses(double jd_ut, double geo_lat, double geo_lon, int house_system, double *cusps, double *ascmc);
             int jme_houses_armc(double armc, double geo_lat, double eps, int house_system, double *cusps, double *ascmc);
             int jme_houses_armc_ex2(double armc, double geo_lat, double eps, int house_system, double *cusps, double *ascmc, double *cusps_speed, double *ascmc_speed);
@@ -663,6 +691,8 @@ class JmeEphFFI
             int jme_jpl_ecliptic_state_split_naif( double jd0, double time_offset, int target_naif, int center_naif, int unit, double *state, char *error );
             int jme_jpl_ecliptic_state_utc( int year, int month, int day, int hour, int minute, double second, int calendar, int target_body, int center_body, int unit, double *state, char *error );
             int jme_jpl_ecliptic_state_utc_naif( int year, int month, int day, int hour, int minute, double second, int calendar, int target_naif, int center_naif, int unit, double *state, char *error );
+            const char *jme_jpl_engine_version(char *buffer, size_t buffer_size);
+            const char *jme_jpl_file(void);
             int jme_jpl_file_version(char *buffer, unsigned int buffer_size, char *error);
             int jme_jpl_id_by_name(const char *name, int *id, char *error);
             int jme_jpl_is_available(void);
@@ -688,6 +718,8 @@ class JmeEphFFI
             int jme_jpl_timescale(void);
             double jme_julian_day(int year, int month, int day, double hour, int calendar);
             int jme_lat_to_lmt(double jd_lat, double geo_lon, double *jd_lmt, char *error);
+            int jme_leap_second_table_info(double *jd_utc_valid_until, double *last_tai_minus_utc, char *error);
+            const char *jme_library_path(void);
             int jme_lmt_to_lat(double jd_lmt, double geo_lon, double *jd_lat, char *error);
             int jme_lun_eclipse_how(double jd_ut, int flags, double *geopos, double *attr, char *error);
             int jme_lun_eclipse_when(double jd_start, int flags, int iflag, double *tret, int backward, char *error);
@@ -729,9 +761,10 @@ class JmeEphFFI
             void jme_set_delta_t_userdef(double dt);
             void jme_set_ephemeris_path(const char *path);
             void jme_set_interpolate_nut(int on);
-            void jme_set_jpl_file(const char *path);
             int jme_set_jpl_center_policy(int policy, char *error);
+            void jme_set_jpl_file(const char *path);
             void jme_set_lapse_rate(double lapse_rate);
+            void jme_set_polar_motion(int enabled);
             void jme_set_sidereal_mode(int sidereal_mode, double t0, double ayan_t0);
             int jme_set_sidereal_mode_checked(int sidereal_mode, double t0, double ayan_t0, char *error);
             void jme_set_tid_acc(double t_acc);
@@ -764,21 +797,9 @@ class JmeEphFFI
             double jme_topo_arcus_visionis(double jd_ut, double *geopos, double *dat_hel, char *error);
             void jme_utc_time_zone( int year, int month, int day, int hour, int minute, double second, double timezone, int *out_year, int *out_month, int *out_day, int *out_hour, int *out_minute, double *out_second );
             int jme_utc_to_jd( int year, int month, int day, int hour, int minute, double second, int calendar, double *jd_utc );
+            const char *jme_version(char *buffer, size_t buffer_size);
             int jme_vis_limit_mag(double jd_ut, double *geopos, double *dat_hel, char *error);
             int jme_vsop87_planet_state(double jd_et, int body, double *results);
-            int jme_get_frame_bias_matrix(int model, double *m);
-            const char *jme_body_name(int body);
-            char *jme_centiseconds_to_degree_string(int cs, char *buffer);
-            char *jme_centiseconds_to_lonlat_string(int cs, char *buffer);
-            char *jme_centiseconds_to_time_string(int cs, char *buffer);
-            char *jme_copy_body_name(int body, char *buffer);
-            const char *jme_ephemeris_path(void);
-            const char *jme_get_ayanamsa_name(int model);
-            const char *jme_house_system_name(int house_system);
-            const char *jme_jpl_engine_version(char *buffer, size_t buffer_size);
-            const char *jme_jpl_file(void);
-            const char *jme_library_path(void);
-            const char *jme_version(char *buffer, size_t buffer_size);
 CDEF;
 
         if ($libraryPath === null) {
@@ -880,17 +901,23 @@ CDEF;
 
     public function jme_set_ephemeris_path(string $path): void
     {
-        $this->profileVoidCall('jme_set_ephemeris_path', fn(): mixed => $this->ffi->jme_set_ephemeris_path($path));
+        $this->profileVoidCall('jme_set_ephemeris_path', function () use ($path): void {
+            $this->ffi->jme_set_ephemeris_path($path);
+        });
     }
 
     public function jme_set_jpl_file(string $path): void
     {
-        $this->profileVoidCall('jme_set_jpl_file', fn(): mixed => $this->ffi->jme_set_jpl_file($path));
+        $this->profileVoidCall('jme_set_jpl_file', function () use ($path): void {
+            $this->ffi->jme_set_jpl_file($path);
+        });
     }
 
     public function jme_set_astro_models(string $models, int $flags): void
     {
-        $this->profileVoidCall('jme_set_astro_models', fn(): mixed => $this->ffi->jme_set_astro_models($models, $flags));
+        $this->profileVoidCall('jme_set_astro_models', function () use ($flags, $models): void {
+            $this->ffi->jme_set_astro_models($models, $flags);
+        });
     }
 
     public function configureEngine(string $engine, ?string $ephemerisPath = null, ?string $jplFile = null): void
@@ -976,7 +1003,9 @@ CDEF;
 
     public function jme_jd_to_utc(float $jd, int $calendar, CData $year, CData $month, CData $day, CData $hour, CData $minute, CData $second): void
     {
-        $this->profileVoidCall('jme_jd_to_utc', fn(): mixed => $this->ffi->jme_jd_to_utc($jd, $calendar, $year, $month, $day, $hour, $minute, $second));
+        $this->profileVoidCall('jme_jd_to_utc', function () use ($calendar, $day, $hour, $jd, $minute, $month, $second, $year): void {
+            $this->ffi->jme_jd_to_utc($jd, $calendar, $year, $month, $day, $hour, $minute, $second);
+        });
     }
 
     public function jme_rise_trans(float $jd_ut, int $body, ?string $starname, int $flags, int $rsmi, CData $geopos, float $atpress, float $attemp, CData $tret, CData $error): int

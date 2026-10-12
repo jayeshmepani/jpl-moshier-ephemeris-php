@@ -8,7 +8,7 @@ on:
         required: true
         default: prebuilt-libs
       native_ref:
-        description: jpl-ephemeris commit/branch to build (default = C PR #3 head)
+        description: jpl-ephemeris commit/branch to build
         required: false
         default: main
         type: string

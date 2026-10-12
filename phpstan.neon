@@ -6,5 +6,5 @@ parameters:
         - examples/
     excludePaths:
         - tests/
-    ignoreErrors:
-        - '#Call to an undefined method FFI::jme_#'
+    stubFiles:
+        - stubs/FFI.stub

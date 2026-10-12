@@ -10,12 +10,12 @@ use JmeEph\FFI\JmeEphFFI;
 use PHPUnit\Framework\TestCase;
 
 /**
- * C engine API added in jpl-ephemeris PR #3. Expected values were printed by
- * the C library itself (%.17g) at jpl-ephemeris c15031e; the wrapper must pass
+ * C engine API added in jpl-ephemeris 1.1.0. Expected values were printed by
+ * the C library itself (%.17g) in jpl-ephemeris 1.1.0; the wrapper must pass
  * them through unchanged. Arithmetic-only results are compared exactly; results
  * that go through libm transcendental functions allow 1e-14 relative.
  */
-final class CoreApiPr3Test extends TestCase
+final class CoreApiExtensionsTest extends TestCase
 {
     private JmeEphFFI $jme;
 

@@ -38,7 +38,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jayeshmepani/jpl-ephemeris
-          # C engine PR #3 head; switch back to main after that PR is merged.
           ref: main
           path: native
 

@@ -837,6 +837,33 @@ CDEF;
         }
     }
 
+    public static function writeProfileReport(): void
+    {
+        if (self::$profileWritten) {
+            return;
+        }
+        self::$profileWritten = true;
+
+        if (self::$profile === []) {
+            return;
+        }
+
+        uasort(self::$profile, static fn(array $a, array $b): int => $b['ns'] <=> $a['ns']);
+        fwrite(STDERR, "[jme-ffi-profile] method,calls,total_s,per_call_s\n");
+        foreach (self::$profile as $name => $row) {
+            $calls = max(1, $row['calls']);
+            $total = $row['ns'] / 1_000_000_000;
+            fwrite(
+                STDERR,
+                sprintf("[jme-ffi-profile] %s,%d,%.9f,%.12f\n", $name, $row['calls'], $total, $total / $calls)
+            );
+            if (isset(self::$profileUniqueInputs[$name])) {
+                fwrite(STDERR, sprintf("[jme-ffi-profile-unique] %s,%d\n", $name, count(self::$profileUniqueInputs[$name])));
+            }
+        }
+    }
+
+
     public function supportsExtendedApi(): bool
     {
         return $this->extendedApiAvailable;
@@ -983,32 +1010,6 @@ CDEF;
         }
 
         return is_string($path) ? $path : FFI::string($path);
-    }
-
-    public static function writeProfileReport(): void
-    {
-        if (self::$profileWritten) {
-            return;
-        }
-        self::$profileWritten = true;
-
-        if (self::$profile === []) {
-            return;
-        }
-
-        uasort(self::$profile, static fn(array $a, array $b): int => $b['ns'] <=> $a['ns']);
-        fwrite(STDERR, "[jme-ffi-profile] method,calls,total_s,per_call_s\n");
-        foreach (self::$profile as $name => $row) {
-            $calls = max(1, $row['calls']);
-            $total = $row['ns'] / 1_000_000_000;
-            fwrite(
-                STDERR,
-                sprintf("[jme-ffi-profile] %s,%d,%.9f,%.12f\n", $name, $row['calls'], $total, $total / $calls)
-            );
-            if (isset(self::$profileUniqueInputs[$name])) {
-                fwrite(STDERR, sprintf("[jme-ffi-profile-unique] %s,%d\n", $name, count(self::$profileUniqueInputs[$name])));
-            }
-        }
     }
 
     private function isExtendedApiResolutionFailure(string $message): bool

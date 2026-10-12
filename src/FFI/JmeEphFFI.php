@@ -29,6 +29,21 @@ use RuntimeException;
  * @method int jme_sol_eclipse_when_loc(float $jd_start, int $flags, CData $geopos, CData $tret, CData $attr, int $backward, CData $error)
  * @method void jme_jd_to_utc(float $jd, int $calendar, CData $year, CData $month, CData $day, CData $hour, CData $minute, CData $second)
  * @method int jme_rise_trans(float $jd_ut, int $body, ?string $starname, int $flags, int $rsmi, CData $geopos, float $atpress, float $attemp, CData $tret, CData $error)
+ * @method int jme_time_scale_convert(float $jd1, float $jd2, int $from_scale, int $to_scale, CData $out1, CData $out2, CData $error)
+ * @method ?CData jme_time_scale_name(int $scale)
+ * @method int jme_leap_second_table_info(CData $jd_utc_valid_until, CData $last_tai_minus_utc, CData $error)
+ * @method int jme_delta_t_iers_table_info(CData $jd_first, CData $jd_last_observed, CData $jd_last, CData $error)
+ * @method int jme_get_ayanamsa_ex2(float $jd_et, int $model, int $flags, CData $ayan, CData $rate, CData $error)
+ * @method int jme_get_ayanamsa_ex2_ut(float $jd_ut, int $model, int $flags, CData $ayan, CData $rate, CData $error)
+ * @method int jme_set_topo_checked(float $lon, float $lat, float $altitude, CData $error)
+ * @method int jme_set_sidereal_mode_checked(int $sidereal_mode, float $t0, float $ayan_t0, CData $error)
+ * @method int jme_set_astro_models_checked(string $models, CData $error)
+ * @method int jme_set_jpl_center_policy(int $policy, CData $error)
+ * @method int jme_get_jpl_center_policy()
+ * @method int jme_calc_resolve_engine(float $jd_et, int $body, CData $engine_id, CData $jpl_center_substituted, CData $error)
+ * @method int jme_sidereal_time_ex(float $jd_ut, int $apparent, CData $hours, CData $error)
+ * @method int jme_houses_gauquelin(float $jd_ut, int $flags, float $geo_lat, float $geo_lon, CData $cusps, CData $ascmc, CData $error)
+ * @method int jme_houses_gauquelin_armc(float $armc, float $geo_lat, float $eps, CData $cusps, CData $ascmc, CData $error)
  */
 class JmeEphFFI
 {
@@ -494,6 +509,21 @@ class JmeEphFFI
     public const JME_MODEL_REVISED_PREC_LASKAR = 403;
     public const JME_MODEL_REVISED_PREC_VONDRAK = 404;
     public const JME_MODEL_REVISED_PREC_LIESKE = 405;
+    public const JME_SIDEREAL_LAHIRI_ICRC = 406;
+    public const JME_TIME_SCALE_UTC = 0;
+    public const JME_TIME_SCALE_UT1 = 1;
+    public const JME_TIME_SCALE_TAI = 2;
+    public const JME_TIME_SCALE_TT = 3;
+    public const JME_TIME_SCALE_TDB = 4;
+    public const JME_TIME_SCALE_TCG = 5;
+    public const JME_TIME_SCALE_TCB = 6;
+    public const JME_AYANAMSA_MEAN = 0;
+    public const JME_AYANAMSA_TRUE = 1;
+    public const JME_JPL_CENTER_STRICT = 0;
+    public const JME_JPL_CENTER_BARYCENTER = 1;
+    public const JME_ENGINE_ID_JPL = 1;
+    public const JME_ENGINE_ID_MOSHIER = 2;
+    public const JME_ENGINE_ID_VSOP87_ELP82B = 3;
     /** @var array<string, array{calls: int, ns: int}> */
     private static array $profile = [];
 

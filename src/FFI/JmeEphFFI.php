@@ -530,11 +530,31 @@ class JmeEphFFI
     /** @var array<string, array<string, true>> */
     private static array $profileUniqueInputs = [];
 
+    private const OPTIONAL_API_FUNCTIONS = [
+        'jme_calc_resolve_engine',
+        'jme_delta_t_iers_table_info',
+        'jme_get_ayanamsa_ex2',
+        'jme_get_ayanamsa_ex2_ut',
+        'jme_get_jpl_center_policy',
+        'jme_houses_gauquelin',
+        'jme_houses_gauquelin_armc',
+        'jme_leap_second_table_info',
+        'jme_set_astro_models_checked',
+        'jme_set_jpl_center_policy',
+        'jme_set_sidereal_mode_checked',
+        'jme_set_topo_checked',
+        'jme_sidereal_time_ex',
+        'jme_time_scale_convert',
+        'jme_time_scale_name',
+    ];
+
     private static ?bool $profileEnabled = null;
 
     private static bool $profileWritten = false;
 
     private readonly FFI $ffi;
+    private bool $extendedApiAvailable = false;
+    private ?string $extendedApiLoadError = null;
 
     public function __construct(?string $libraryPath = null)
     {
@@ -769,11 +789,41 @@ CDEF;
         }
 
         $this->prepareLibraryDirectory($libraryPath);
-        $this->ffi = FFI::cdef($cdef, $libraryPath);
+        $optionalFunctionPattern = '/\\b(?:' . implode('|', array_map(
+            static fn (string $function): string => preg_quote($function, '/'),
+            self::OPTIONAL_API_FUNCTIONS
+        )) . ')\\s*\\(/';
+        $baseCdef = implode("\\n", array_filter(
+            explode("\\n", $cdef),
+            static fn (string $line): bool => preg_match($optionalFunctionPattern, $line) !== 1
+        ));
+
+        try {
+            $this->ffi = FFI::cdef($cdef, $libraryPath);
+            $this->extendedApiAvailable = true;
+        } catch (\\FFI\\Exception $exception) {
+            if (! $this->isExtendedApiResolutionFailure($exception->getMessage())) {
+                throw $exception;
+            }
+
+            // Released runtimes may predate the additive extended API. Fall
+            // back to the core declarations in a single FFI scope so CData
+            // pointers remain type-compatible for every core call.
+            $this->ffi = FFI::cdef($baseCdef, $libraryPath);
+            $this->extendedApiLoadError = $exception->getMessage();
+        }
     }
 
     public function __call(string $name, array $arguments)
     {
+        if (in_array($name, self::OPTIONAL_API_FUNCTIONS, true) && ! $this->extendedApiAvailable) {
+            throw new RuntimeException(sprintf(
+                'Native JME library does not expose extended API %s. Use a runtime built from a core revision that includes the extended API. Loader detail: %s',
+                $name,
+                $this->extendedApiLoadError ?? 'optional symbols are unavailable'
+            ));
+        }
+
         if (! $this->isProfileEnabled()) {
             return $this->ffi->$name(...$arguments);
         }
@@ -784,6 +834,22 @@ CDEF;
         } finally {
             $this->recordProfile($name, hrtime(true) - $start);
         }
+    }
+
+    private function isExtendedApiResolutionFailure(string $message): bool
+    {
+        foreach (self::OPTIONAL_API_FUNCTIONS as $function) {
+            if (str_contains($message, "Failed resolving C function '" . $function . "'")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function supportsExtendedApi(): bool
+    {
+        return $this->extendedApiAvailable;
     }
 
     public function jme_julian_day(int $year, int $month, int $day, float $hour, int $calendar): float

@@ -132,7 +132,7 @@ This package aims for **100% compatibility with the project-owned JME native con
 
 ### Native Library Licensing
 
-The project-authored code in this repository is licensed under the **MIT License** (see `LICENSE`). The distributed package is `MIT AND CeCILL-B` because it bundles prebuilt CALCEPH 4.0.5 binaries under CeCILL-B (see `LICENSES/CeCILL-B.txt`).
+The project-authored code in this repository is licensed under the **MIT License** (see `LICENSE`). The distributed package is `MIT AND CeCILL-B` because it bundles prebuilt CALCEPH 5.0.1 binaries under CeCILL-B (see `LICENSES/CeCILL-B.txt`).
 
 Contributions to this repository are accepted under the MIT License. Third-party native libraries or data bundled with a deployment keep their own licenses and notices; see `THIRD_PARTY_NOTICES.md`.
 

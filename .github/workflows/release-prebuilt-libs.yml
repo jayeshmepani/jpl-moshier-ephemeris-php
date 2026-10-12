@@ -10,7 +10,7 @@ on:
       native_ref:
         description: jpl-ephemeris commit/branch to build (default = C PR #3 head)
         required: false
-        default: c15031e4ba66f14ee2e8170e05e0f664d9ac70a8
+        default: main
         type: string
       publish:
         description: Publish a GitHub release (false = CI artifacts only)

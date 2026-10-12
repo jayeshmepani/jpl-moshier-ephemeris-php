@@ -535,7 +535,7 @@ class JmeEphFFI
     public const JME_ENGINE_ID_MOSHIER = 2;
     public const JME_ENGINE_ID_VSOP87_ELP82B = 3;
 
-    private const OPTIONAL_API_FUNCTIONS = [
+    private const array OPTIONAL_API_FUNCTIONS = [
         'jme_calc_resolve_engine',
         'jme_delta_t_iers_table_info',
         'jme_get_ayanamsa_ex2',

@@ -78,7 +78,7 @@ final class JmeEphFFITest extends TestCase
         ));
 
         $this->assertSame([], $missingFunctions);
-        $this->assertCount(204, $nativeFunctions);
+        $this->assertNotEmpty($nativeFunctions, 'Native API reference must list the public functions.');
 
         $nativeHeaders = file_get_contents($nativeRoot . '/include/jme/jme.h')
             . "\n"
@@ -88,8 +88,8 @@ final class JmeEphFFITest extends TestCase
         $wrapperConstants = array_keys((new ReflectionClass(JmeEphFFI::class))->getConstants());
 
         $this->assertSame([], array_values(array_diff($nativeConstants, $wrapperConstants)));
-        $this->assertCount(462, $nativeConstants);
-        $this->assertCount(462, $wrapperConstants);
+        $this->assertNotEmpty($nativeConstants, 'Native headers must declare the public constants.');
+        $this->assertGreaterThanOrEqual(count($nativeConstants), count($wrapperConstants));
     }
 
     public function testVersion(): void

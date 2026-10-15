@@ -14,7 +14,7 @@ This package wraps the project-owned `jme_*` C API from the JPL Moshier Ephemeri
 - Primary public functions: `jme_*`
 - Primary public constants: `JME_*`
 - Current wrapper target: all 225 public `jme_*` functions tracked by the native API inventory
-- The PHP wrapper exposes all 480 semantic `JME_*` native constants (header guards excluded) and preserves existing compatibility aliases where present
+- The PHP wrapper exposes 478 public `JME_*` constants, plus the two header include guards `JME_JME_H` and `JME_EXTENDED_H`, and preserves existing compatibility aliases where present
 - Native backend: `libjme.so`, `libjme.dylib`, or `jme.dll`
 - No hidden rounding, output reshaping, or dropped status/error buffers
 - Incomplete native behavior should return `JME_ERR` from the C library rather than pretending to provide production ephemeris output
@@ -115,7 +115,7 @@ The test suite verifies the PHP wrapper against the JME-native contract, includi
 `composer verify:surface` performs an exact low-level surface audit of the generated wrapper:
 
 - `225` tracked `jme_*` declarations compared against the native header prototypes
-- `480` `JME_*` constants compared against native header values
+- `478` public `JME_*` constants, plus the two header include guards, compared against native header values
 - numeric constants cross-checked through a compiled C probe instead of trusting PHP generation alone
 
 ## Credits

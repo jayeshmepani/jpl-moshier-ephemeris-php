@@ -23,7 +23,7 @@
         "laravel-package",
         "php-library"
     ],
-    "homepage": "https://github.com/jayeshmepani/jpl-moshier-ephemeris-php",
+    "homepage": "https://jayeshmepani.github.io/jpl-ephemeris/#lang-php",
     "readme": "README.md",
     "license": "MIT AND CECILL-B",
     "minimum-stability": "stable",
@@ -39,6 +39,7 @@
     "support": {
         "issues": "https://github.com/jayeshmepani/jpl-moshier-ephemeris-php/issues",
         "source": "https://github.com/jayeshmepani/jpl-moshier-ephemeris-php",
+        "docs": "https://jayeshmepani.github.io/jpl-ephemeris/#lang-php",
         "email": "jayeshmepani777@gmail.com"
     },
     "funding": [

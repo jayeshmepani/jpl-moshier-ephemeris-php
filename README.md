@@ -9,6 +9,8 @@ PHP 8.3+ FFI wrapper for the independent JPL Moshier Ephemeris C library.
 
 This package wraps the project-owned `jme_*` C API from the JPL Moshier Ephemeris native library.
 
+PHP setup, the Laravel provider, and the shared function list are in the native library's single reference: <https://jayeshmepani.github.io/jpl-ephemeris/#lang-php>.
+
 ## Contract
 
 - Primary public functions: `jme_*`

@@ -28,13 +28,17 @@ final class JmeEphFFITest extends TestCase
 
     public function testCoreConstantsMatchNativeHeaderContract(): void
     {
-        $this->assertSame('1.3.0', JmeEphFFI::JME_VERSION);
+        $this->assertSame('2.0.0', JmeEphFFI::JME_VERSION);
         $this->assertSame(0, JmeEphFFI::JME_OK);
         $this->assertSame(-1, JmeEphFFI::JME_ERR);
         $this->assertSame(0, JmeEphFFI::JME_BODY_SUN);
         $this->assertSame(1, JmeEphFFI::JME_BODY_MOON);
         $this->assertSame(21, JmeEphFFI::JME_BODY_MEAN_NODE);
         $this->assertSame(22, JmeEphFFI::JME_BODY_TRUE_NODE);
+        $this->assertSame(7, JmeEphFFI::JME_BODY_URANUS);
+        $this->assertSame(-1000, JmeEphFFI::JME_BODY_ALTJIRA);
+        $this->assertSame(-1015, JmeEphFFI::JME_BODY_ASTEROID_012);
+        $this->assertSame(-1265, JmeEphFFI::JME_BODY_VESTA);
         $this->assertSame(0, JmeEphFFI::JME_CALC_NONE);
         $this->assertSame(1, JmeEphFFI::JME_CALC_SPEED);
         $this->assertSame(512, JmeEphFFI::JME_CALC_SIDEREAL);

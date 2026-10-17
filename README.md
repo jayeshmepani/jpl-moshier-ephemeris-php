@@ -21,6 +21,10 @@ PHP setup, the Laravel provider, and the shared function list are in the native 
 - No hidden rounding, output reshaping, or dropped status/error buffers
 - Incomplete native behavior should return `JME_ERR` from the C library rather than pretending to provide production ephemeris output
 
+## JME 2.0.0 upgrade note
+
+Extended-body identifiers now use JME's negative identifier range, separate from the core body identifiers. Applications that stored the old numeric values must migrate to the corresponding `JME_BODY_*` constants. Function signatures are unchanged.
+
 ## Engine Selection
 
 The low-level `JmeEphFFI` class exposes every native function directly. The optional Laravel-style `JmeService::calc()` convenience method sets `ENGINE=...` through `jme_set_astro_models()` and then calls `jme_calc()`:
